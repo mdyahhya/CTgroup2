@@ -1,1 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceAttend - Smart Attendance System</title>
+    <meta name="description" content="AI-powered face recognition attendance system">
+    <meta name="theme-color" content="#3B82F6">
+    
+    <!-- PWA Meta Tags -->
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FaceAttend">
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/dist/face-api.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Face-api.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .pulse-ring {
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.33);
+                opacity: 1;
+            }
+            80%, 100% {
+                transform: scale(2.4);
+                opacity: 0;
+            }
+        }
+        
+        .face-box {
+            position: absolute;
+            border: 3px solid #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
 
+    
+.gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.pulse-ring {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+    </style>
+</head>
+<body class="min-h-screen gradient-bg">
+    <!-- Navigation -->
+    <nav class="glass-effect p-4 mb-6">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-user-check text-white text-2xl"></i>
+                <h1 class="text-white text-xl font-bold">FaceAttend</h1>
+            </div>
+            
+            <div class="flex space-x-4">
+                <button id="enrollBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-user-plus mr-2"></i>Enroll
+                </button>
+                <button id="attendanceBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-clipboard-list mr-2"></i>Attendance
+                </button>
+                <button id="recognizeBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-camera mr-2"></i>Recognize
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="glass-effect p-8 rounded-xl text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-white text-lg">Loading AI Models...</p>
+            <p id="loadingProgress" class="text-gray-300 text-sm mt-2">Initializing...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4">
+        <!-- Enrollment Section -->
+        <div id="enrollSection" class="glass-effect p-6 rounded-xl mb-6 hidden">
+            <h2 class="text-white text-2xl font-bold mb-4">
+                <i class="fas fa-user-plus mr-2"></i>Student Enrollment
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <div class="relative mb-4">
+                        <video id="enrollVideo" width="100%" height="300" autoplay muted class="rounded-lg bg-black"></video>
+                        <canvas id="enrollCanvas" class="absolute top-0 left-0 rounded-lg"></canvas>
+                    </div>
+                    
+                    <div class="flex justify-center space-x-4">
+                        <button id="startEnrollCamera" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-video mr-2"></i>Start Camera
+                        </button>
+                        <button id="captureEnroll" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg" disabled>
+                            <i class="fas fa-camera mr-2"></i>Capture Face
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <form id="enrollForm" class="space-y-4">
+                        <div>
+                            <label class="block text-white text-sm font-bold mb-2">Student Name</label>
+                            <input type="text" id="studentName" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-white text-sm font-bold mb-2">Student ID</label>
+                            <input type="text" id="studentId" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-white text-sm font-bold mb-2">Class</label>
+                            <input type="text" id="studentClass" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-white text-sm font-bold mb-2">Email</label>
+                            <input type="email" id="studentEmail" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        
+                        <button type="submit" id="submitEnroll" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg" disabled>
+                            <i class="fas fa-save mr-2"></i>Save Student
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recognition Section -->
+        <div id="recognizeSection" class="glass-effect p-6 rounded-xl mb-6">
+            <h2 class="text-white text-2xl font-bold mb-4">
+                <i class="fas fa-camera mr-2"></i>Face Recognition
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <div class="relative mb-4">
+                        <video id="recognizeVideo" width="100%" height="300" autoplay muted class="rounded-lg bg-black"></video>
+                        <canvas id="recognizeCanvas" class="absolute top-0 left-0 rounded-lg"></canvas>
+                    </div>
+                    
+                    <div class="flex justify-center space-x-4">
+                        <button id="startRecognizeCamera" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-video mr-2"></i>Start Recognition
+                        </button>
+                        <button id="stopRecognizeCamera" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg" disabled>
+                            <i class="fas fa-stop mr-2"></i>Stop Camera
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="recognitionResults" class="space-y-4">
+                    <h3 class="text-white text-lg font-bold">Recognition Results</h3>
+                    <div id="recognizedStudent" class="hidden glass-effect p-4 rounded-lg">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-white text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 id="recognizedName" class="text-white text-lg font-bold"></h4>
+                                <p id="recognizedId" class="text-gray-300"></p>
+                                <p id="recognizedClass" class="text-gray-300"></p>
+                                <p id="recognizedConfidence" class="text-green-400 text-sm"></p>
+                            </div>
+                        </div>
+                        <button id="markAttendance" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg">
+                            <i class="fas fa-check mr-2"></i>Mark Attendance
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Section -->
+        <div id="attendanceSection" class="glass-effect p-6 rounded-xl hidden">
+            <h2 class="text-white text-2xl font-bold mb-4">
+                <i class="fas fa-clipboard-list mr-2"></i>Attendance Records
+            </h2>
+            
+            <div class="mb-4 flex flex-wrap gap-4">
+                <input type="date" id="attendanceDate" class="px-3 py-2 border rounded-lg">
+                <button id="exportAttendance" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-download mr-2"></i>Export CSV
+                </button>
+                <button id="clearAttendance" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-trash mr-2"></i>Clear Data
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="bg-gray-700">
+                            <th class="px-4 py-2 text-left">Photo</th>
+                            <th class="px-4 py-2 text-left">Name</th>
+                            <th class="px-4 py-2 text-left">Student ID</th>
+                            <th class="px-4 py-2 text-left">Class</th>
+                            <th class="px-4 py-2 text-left">Status</th>
+                            <th class="px-4 py-2 text-left">Time</th>
+                            <th class="px-4 py-2 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        <!-- Attendance records will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Install PWA Popup -->
+    <div id="install-popup-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="glass-effect p-6 rounded-xl max-w-md mx-4">
+            <h3 class="text-white text-xl font-bold mb-4">Install FaceAttend</h3>
+            <p class="text-gray-300 mb-6">Install this app on your device for quick access and offline functionality.</p>
+            <div class="flex space-x-4">
+                <button id="installConfirm" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">
+                    <i class="fas fa-download mr-2"></i>Install
+                </button>
+                <button onclick="hideInstallPopup()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Install Button -->
+    <div id="install-button-container" class="fixed bottom-4 right-4 hidden">
+        <button onclick="showInstallPopup()" class="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg pulse-ring">
+            <i class="fas fa-download text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="fixed top-20 right-4 z-40"></div>
+
+    <script>
+        // Global variables
+        let enrolledStudents = JSON.parse(localStorage.getItem('enrolledStudents') || '[]');
+        let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+        let currentSection = 'recognize';
+        let isModelsLoaded = false;
+        let enrollVideoStream = null;
+        let recognizeVideoStream = null;
+        let recognitionInterval = null;
+        let capturedFaceDescriptor = null;
+
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!isAppInstalled()) {
+                toggleInstallButton();
+            }
+        });
+
+        document.getElementById('installConfirm').addEventListener('click', async () => {
+            hideInstallPopup();
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    markInstallAttempted();
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // Initialize Face-api models
+        async function loadModels() {
+            const loadingProgress = document.getElementById('loadingProgress');
+            
+            try {
+                loadingProgress.textContent = 'Loading face detection model...';
+                await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+                
+                loadingProgress.textContent = 'Loading face landmarks model...';
+                await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+                
+                loadingProgress.textContent = 'Loading face recognition model...';
+                await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+                
+                loadingProgress.textContent = 'Models loaded successfully!';
+                isModelsLoaded = true;
+                
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error loading models:', error);
+                loadingProgress.textContent = 'Error loading models. Please refresh.';
+            }
+        }
+
+        // Navigation
+        function showSection(section) {
+            document.getElementById('enrollSection').classList.add('hidden');
+            document.getElementById('recognizeSection').classList.add('hidden');
+            document.getElementById('attendanceSection').classList.add('hidden');
+            
+            document.getElementById(section + 'Section').classList.remove('hidden');
+            currentSection = section;
+            toggleInstallButton();
+        }
+
+        document.getElementById('enrollBtn').addEventListener('click', () => showSection('enroll'));
+        document.getElementById('recognizeBtn').addEventListener('click', () => showSection('recognize'));
+        document.getElementById('attendanceBtn').addEventListener('click', () => {
+            showSection('attendance');
+            loadAttendanceTable();
+        });
+
+        // Enrollment functionality
+        document.getElementById('startEnrollCamera').addEventListener('click', startEnrollCamera);
+        document.getElementById('captureEnroll').addEventListener('click', captureForEnrollment);
+        document.getElementById('enrollForm').addEventListener('submit', saveStudent);
+
+        async function startEnrollCamera() {
+            try {
+                const video = document.getElementById('enrollVideo');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                video.srcObject = stream;
+                enrollVideoStream = stream;
+                
+                document.getElementById('startEnrollCamera').disabled = true;
+                document.getElementById('captureEnroll').disabled = false;
+                
+                showMessage('Camera started. Position your face in the frame.', 'success');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showMessage('Error accessing camera. Please check permissions.', 'error');
+            }
+        }
+
+        async function captureForEnrollment() {
+            if (!isModelsLoaded) {
+                showMessage('Models are still loading. Please wait.', 'warning');
+                return;
+            }
+
+            const video = document.getElementById('enrollVideo');
+            const canvas = document.getElementById('enrollCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            try {
+                const detections = await faceapi
+                    .detectAllFaces(video)
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                if (detections.length === 0) {
+                    showMessage('No face detected. Please position your face clearly in the frame.', 'warning');
+                    return;
+                }
+
+                if (detections.length > 1) {
+                    showMessage('Multiple faces detected. Please ensure only one face is in the frame.', 'warning');
+                    return;
+                }
+
+                // Clear canvas and draw face box
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const detection = detections[0];
+                const { x, y, width, height } = detection.detection.box;
+                
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, width, height);
+                
+                // Store face descriptor
+                capturedFaceDescriptor = detection.descriptor;
+                
+                document.getElementById('submitEnroll').disabled = false;
+                showMessage('Face captured successfully! Fill in student details and save.', 'success');
+                
+            } catch (error) {
+                console.error('Error capturing face:', error);
+                showMessage('Error processing face. Please try again.', 'error');
+            }
+        }
+
+        function saveStudent(e) {
+            e.preventDefault();
+            
+            if (!capturedFaceDescriptor) {
+                showMessage('Please capture a face first.', 'warning');
+                return;
+            }
+
+            const name = document.getElementById('studentName').value;
+            const id = document.getElementById('studentId').value;
+            const studentClass = document.getElementById('studentClass').value;
+            const email = document.getElementById('studentEmail').value;
+
+            // Check if student ID already exists
+            if (enrolledStudents.find(s => s.id === id)) {
+                showMessage('Student ID already exists.', 'error');
+                return;
+            }
+
+            const student = {
+                name,
+                id,
+                class: studentClass,
+                email,
+                descriptor: Array.from(capturedFaceDescriptor),
+                enrolledAt: new Date().toISOString()
+            };
+
+            enrolledStudents.push(student);
+            localStorage.setItem('enrolledStudents', JSON.stringify(enrolledStudents));
+
+            // Reset form and camera
+            document.getElementById('enrollForm').reset();
+            document.getElementById('enrollCanvas').getContext('2d').clearRect(0, 0, 640, 480);
+            document.getElementById('submitEnroll').disabled = true;
+            document.getElementById('captureEnroll').disabled = true;
+            document.getElementById('startEnrollCamera').disabled = false;
+            
+            if (enrollVideoStream) {
+                enrollVideoStream.getTracks().forEach(track => track.stop());
+                enrollVideoStream = null;
+            }
+            
+            capturedFaceDescriptor = null;
+            showMessage(`Student ${name} enrolled successfully!`, 'success');
+        }
+
+        // Recognition functionality
+        document.getElementById('startRecognizeCamera').addEventListener('click', startRecognition);
+        document.getElementById('stopRecognizeCamera').addEventListener('click', stopRecognition);
+        document.getElementById('markAttendance').addEventListener('click', markStudentAttendance);
+
+        async function startRecognition() {
+            if (!isModelsLoaded) {
+                showMessage('Models are still loading. Please wait.', 'warning');
+                return;
+            }
+
+            if (enrolledStudents.length === 0) {
+                showMessage('No students enrolled. Please enroll students first.', 'warning');
+                return;
+            }
+
+            try {
+                const video = document.getElementById('recognizeVideo');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                video.srcObject = stream;
+                recognizeVideoStream = stream;
+                
+                document.getElementById('startRecognizeCamera').disabled = true;
+                document.getElementById('stopRecognizeCamera').disabled = false;
+                
+                // Start recognition loop
+                recognitionInterval = setInterval(performRecognition, 1000);
+                showMessage('Recognition started. Position student face in frame.', 'success');
+                
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                showMessage('Error accessing camera. Please check permissions.', 'error');
+            }
+        }
+
+        function stopRecognition() {
+            if (recognizeVideoStream) {
+                recognizeVideoStream.getTracks().forEach(track => track.stop());
+                recognizeVideoStream = null;
+            }
+            
+            if (recognitionInterval) {
+                clearInterval(recognitionInterval);
+                recognitionInterval = null;
+            }
+            
+            document.getElementById('startRecognizeCamera').disabled = false;
+            document.getElementById('stopRecognizeCamera').disabled = true;
+            document.getElementById('recognizedStudent').classList.add('hidden');
+            
+            const canvas = document.getElementById('recognizeCanvas');
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            showMessage('Recognition stopped.', 'info');
+        }
+
+        async function performRecognition() {
+            const video = document.getElementById('recognizeVideo');
+            const canvas = document.getElementById('recognizeCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            try {
+                const detections = await faceapi
+                    .detectAllFaces(video)
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (detections.length === 0) {
+                    document.getElementById('recognizedStudent').classList.add('hidden');
+                    return;
+                }
+
+                // Draw face boxes
+                detections.forEach(detection => {
+                    const { x, y, width, height } = detection.detection.box;
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, width, height);
+                });
+
+                // Recognize faces
+                const labeledDescriptors = enrolledStudents.map(student => 
+                    new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
+                );
+
+                const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+                
+                for (const detection of detections) {
+                    const match = faceMatcher.findBestMatch(detection.descriptor);
+                    
+                    if (match.label !== 'unknown') {
+                        const student = enrolledStudents.find(s => s.id === match.label);
+                        if (student) {
+                            displayRecognizedStudent(student, match.distance);
+                        }
+                    } else {
+                        document.getElementById('recognizedStudent').classList.add('hidden');
+                    }
+                }
+
+            } catch (error) {
+                console.error('Recognition error:', error);
+            }
+        }
+
+        function displayRecognizedStudent(student, distance) {
+            const confidence = Math.round((1 - distance) * 100);
+            
+            document.getElementById('recognizedName').textContent = student.name;
+            document.getElementById('recognizedId').textContent = `ID: ${student.id}`;
+            document.getElementById('recognizedClass').textContent = `Class: ${student.class}`;
+            document.getElementById('recognizedConfidence').textContent = `Confidence: ${confidence}%`;
+            
+            document.getElementById('recognizedStudent').classList.remove('hidden');
+            document.getElementById('recognizedStudent').dataset.studentId = student.id;
+        }
+
+        function markStudentAttendance() {
+            const studentId = document.getElementById('recognizedStudent').dataset.studentId;
+            const student = enrolledStudents.find(s => s.id === studentId);
+            
+            if (!student) return;
+
+            const today = new Date().toDateString();
+            const existingRecord = attendanceRecords.find(
+                r => r.studentId === studentId && new Date(r.date).toDateString() === today
+            );
+
+            if (existingRecord) {
+                showMessage(`${student.name} already marked present today.`, 'warning');
+                return;
+            }
+
+            const attendanceRecord = {
+                studentId: student.id,
+                name: student.name,
+                class: student.class,
+                date: new Date().toISOString(),
+                status: 'Present',
+                markedAt: new Date().toLocaleTimeString()
+            };
+
+            attendanceRecords.push(attendanceRecord);
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            loadAttendanceTable();
+            showMessage(`${student.name} marked present successfully!`, 'success');
+        }
+
+        // Export attendance to CSV
+        document.getElementById('exportAttendance').addEventListener('click', exportToCSV);
+        document.getElementById('clearAttendance').addEventListener('click', clearAllData);
+        document.getElementById('attendanceDate').addEventListener('change', loadAttendanceTable);
+
+        function exportToCSV() {
+            if (attendanceRecords.length === 0) {
+                showMessage('No attendance records to export.', 'warning');
+                return;
+            }
+
+            const headers = ['Name', 'Student ID', 'Class', 'Date', 'Time', 'Status'];
+            const csvContent = [
+                headers.join(','),
+                ...attendanceRecords.map(record => [
+                    record.name,
+                    record.studentId,
+                    record.class,
+                    new Date(record.date).toDateString(),
+                    record.markedAt,
+                    record.status
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showMessage('Attendance exported successfully!', 'success');
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                localStorage.removeItem('enrolledStudents');
+                localStorage.removeItem('attendanceRecords');
+                enrolledStudents = [];
+                attendanceRecords = [];
+                loadAttendanceTable();
+                showMessage('All data cleared.', 'info');
+            }
+        }
+
+        // Utility functions
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            const messageEl = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            messageEl.className = `${colors[type]} text-white px-4 py-2 rounded-lg mb-2 slide-in`;
+            messageEl.textContent = message;
+            
+            container.appendChild(messageEl);
+            
+            setTimeout(() => {
+                messageEl.remove();
+            }, 5000);
+        }
+
+        // PWA Functions (from provided reference)
+        function showInstallPopup() {
+            markInstallAttempted();
+            document.getElementById('install-popup-overlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideInstallPopup() {
+            document.getElementById('install-popup-overlay').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function isAppInstalled() {
+            if (localStorage.getItem('pwa-install-attempted') === 'true') {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                return true;
+            }
+            
+            if (window.navigator.standalone === true) {
+                return true;
+            }
+            
+            if (document.referrer.includes('android-app://')) {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: minimal-ui)').matches) {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: fullscreen)').matches) {
+                return true;
+            }
+            
+            if (window.navigator.userAgent.includes('wv')) {
+                return true;
+            }
+            
+            if (window.location.search.includes('utm_source=homescreen') || 
+                window.location.search.includes('source=pwa')) {
+                return true;
+            }
+            
+            if ('getInstalledRelatedApps' in window.navigator) {
+                window.navigator.getInstalledRelatedApps().then(relatedApps => {
+                    if (relatedApps.length > 0) {
+                        document.getElementById('install-button-container').classList.add('hidden');
+                    }
+                }).catch(() => {
+                    // Ignore errors
+                });
+            }
+            
+            if (window.chrome && window.chrome.app && window.chrome.app.isInstalled) {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: browser)').matches === false) {
+                return true;
+            }
+            
+            return false;
+        }
+
+        function markInstallAttempted() {
+            try {
+                localStorage.setItem('pwa-install-attempted', 'true');
+            } catch (e) {
+                console.log('Could not save install state');
+            }
+        }
+
+        function resetInstallState() {
+            try {
+                localStorage.removeItem('pwa-install-attempted');
+                toggleInstallButton();
+            } catch (e) {
+                console.log('Could not reset install state');
+            }
+        }
+
+        function toggleInstallButton() {
+            const installContainer = document.getElementById('install-button-container');
+            
+            if (isAppInstalled()) {
+                installContainer.classList.add('hidden');
+                return;
+            }
+            
+            if (currentSection === 'recognize') {
+                installContainer.classList.remove('hidden');
+            } else {
+                installContainer.classList.add('hidden');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                hideInstallPopup();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleInstallButton();
+            
+            window.matchMedia('(display-mode: standalone)').addEventListener('change', function(e) {
+                toggleInstallButton();
+            });
+        });
+        function loadAttendanceTable() {
+    const tbody = document.getElementById('attendanceTableBody');
+    const selectedDate = document.getElementById('attendanceDate').value;
+    
+    tbody.innerHTML = '';
+    
+    let recordsToShow = attendanceRecords;
+    if (selectedDate) {
+        recordsToShow = attendanceRecords.filter(record => 
+            new Date(record.date).toDateString() === new Date(selectedDate).toDateString()
+        );
+    }
+    
+    recordsToShow.forEach((record, index) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-600';
+        
+        row.innerHTML = `
+            <td class="px-4 py-2">
+                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white"></i>
+                </div>
+            </td>
+            <td class="px-4 py-2">${record.name}</td>
+            <td class="px-4 py-2">${record.studentId}</td>
+            <td class="px-4 py-2">${record.class}</td>
+            <td class="px-4 py-2">
+                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm">${record.status}</span>
+            </td>
+            <td class="px-4 py-2">${new Date(record.date).toLocaleDateString()} ${record.markedAt}</td>
+            <td class="px-4 py-2">
+                <button onclick="deleteAttendanceRecord(${index})" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function deleteAttendanceRecord(index) {
+    if (confirm('Are you sure you want to delete this record?')) {
+        attendanceRecords.splice(index, 1);
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        loadAttendanceTable();
+        showMessage('Attendance record deleted.', 'success');
+    }
+}
+
+        // Initialize app
+        window.addEventListener('load', () => {
+            loadModels();
+            showSection('recognize');
+            
+            // Set today's date as default
+            document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (enrollVideoStream) {
+                enrollVideoStream.getTracks().forEach(track => track.stop());
+            }
+            if (recognizeVideoStream) {
+                recognizeVideoStream.getTracks().forEach(track => track.stop());
+            }
+            if (recognitionInterval) {
+                clearInterval(recognitionInterval);
+            }
+        });
+    </script>
+</body>
+</html>
