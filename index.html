@@ -25,20 +25,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        .container {
-    width: 100vw;
-    max-width: 375px;
-    height: 100vh;
-    max-height: 770px;
-    margin: 0 auto;
-    background: white;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
-    position: relative;
-    border-radius: 0;
-        }
         .glass-effect {
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -142,7 +128,6 @@
     </style>
 </head>
 <body class="min-h-screen gradient-bg">
-<div class="container">
     <!-- Navigation -->
     <nav class="glass-effect p-4 mb-6">
         <div class="container mx-auto flex justify-between items-center">
@@ -336,7 +321,7 @@
 
     <!-- Success/Error Messages -->
     <div id="messageContainer" class="fixed top-20 right-4 z-40"></div>
-</div>
+
     <script>
         // Global variables
         let enrolledStudents = JSON.parse(localStorage.getItem('enrolledStudents') || '[]');
