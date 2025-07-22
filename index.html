@@ -25,6 +25,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100vw;
+            max-width: 375px;
+            height: 100vh;
+            max-height: 770px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            border-radius: 0;
+        }
+
         .glass-effect {
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -62,8 +89,8 @@
             border: 3px solid #f3f3f3;
             border-top: 3px solid #3498db;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             animation: spin 2s linear infinite;
         }
         
@@ -81,246 +108,660 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-    
-.gradient-bg {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+        /* Navigation */
+        nav {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
 
-.glass-effect {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
 
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    animation: spin 2s linear infinite;
-}
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+        .nav-brand i {
+            color: white;
+            font-size: 18px;
+        }
 
-.slide-in {
-    animation: slideIn 0.3s ease-out;
-}
+        .nav-brand h1 {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+        }
 
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
+        .nav-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
 
-.pulse-ring {
-    animation: pulse 2s infinite;
-}
+        .nav-buttons button {
+            padding: 6px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-}
+        .nav-buttons button i {
+            font-size: 10px;
+        }
 
+        #enrollBtn {
+            background: #10b981;
+        }
+
+        #enrollBtn:hover {
+            background: #059669;
+        }
+
+        #attendanceBtn {
+            background: #3b82f6;
+        }
+
+        #attendanceBtn:hover {
+            background: #2563eb;
+        }
+
+        #recognizeBtn {
+            background: #8b5cf6;
+        }
+
+        #recognizeBtn:hover {
+            background: #7c3aed;
+        }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .loading-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .loading-content p {
+            color: white;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        #loadingProgress {
+            color: #d1d5db;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .section h2 {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section h2 i {
+            font-size: 16px;
+        }
+
+        /* Video containers */
+        .video-container {
+            position: relative;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #enrollVideo, #recognizeVideo {
+            width: 100%;
+            height: 200px;
+            background: black;
+            border-radius: 8px;
+        }
+
+        #enrollCanvas, #recognizeCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 8px;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .button-group button {
+            padding: 8px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .button-group button i {
+            font-size: 10px;
+        }
+
+        .button-group button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Form styles */
+        .form-container {
+            margin-top: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        /* Recognition Results */
+        #recognitionResults {
+            margin-top: 16px;
+        }
+
+        #recognitionResults h3 {
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        #recognizedStudent {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .student-avatar {
+            width: 40px;
+            height: 40px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .student-avatar i {
+            color: white;
+            font-size: 16px;
+        }
+
+        .student-details h4 {
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .student-details p {
+            color: #d1d5db;
+            font-size: 12px;
+            margin-bottom: 1px;
+        }
+
+        #recognizedConfidence {
+            color: #10b981 !important;
+        }
+
+        /* Attendance Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+
+        .attendance-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .attendance-controls input,
+        .attendance-controls button {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .attendance-controls input {
+            border: 1px solid #d1d5db;
+            background: white;
+        }
+
+        .attendance-controls button {
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        table {
+            width: 100%;
+            color: white;
+            font-size: 12px;
+        }
+
+        table th,
+        table td {
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        table th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        /* Install popup */
+        #install-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .install-popup {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 300px;
+            margin: 16px;
+        }
+
+        .install-popup h3 {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .install-popup p {
+            color: #d1d5db;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .install-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .install-buttons button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+
+        #installConfirm {
+            background: #3b82f6;
+        }
+
+        #installConfirm:hover {
+            background: #2563eb;
+        }
+
+        /* Install button */
+        #install-button-container {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            z-index: 40;
+        }
+
+        #install-button-container button {
+            background: #3b82f6;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #install-button-container button:hover {
+            background: #2563eb;
+        }
+
+        /* Message container */
+        #messageContainer {
+            position: fixed;
+            top: 80px;
+            right: 16px;
+            z-index: 40;
+            max-width: 280px;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Utility classes */
+        .bg-green-500 { background: #10b981; }
+        .bg-green-600 { background: #059669; }
+        .bg-blue-500 { background: #3b82f6; }
+        .bg-blue-600 { background: #2563eb; }
+        .bg-purple-500 { background: #8b5cf6; }
+        .bg-purple-600 { background: #7c3aed; }
+        .bg-red-500 { background: #ef4444; }
+        .bg-red-600 { background: #dc2626; }
+        .bg-gray-500 { background: #6b7280; }
+        .bg-gray-600 { background: #4b5563; }
+
+        .hover\:bg-green-600:hover { background: #059669; }
+        .hover\:bg-blue-600:hover { background: #2563eb; }
+        .hover\:bg-purple-600:hover { background: #7c3aed; }
+        .hover\:bg-red-600:hover { background: #dc2626; }
+        .hover\:bg-gray-600:hover { background: #4b5563; }
+
+        /* Responsive adjustments */
+        @media (max-width: 375px) {
+            .container {
+                max-width: 100vw;
+            }
+            
+            .nav-buttons {
+                margin-top: 8px;
+                width: 100%;
+            }
+            
+            .nav-buttons button {
+                flex: 1;
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen gradient-bg">
-    <!-- Navigation -->
-    <nav class="glass-effect p-4 mb-6">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <i class="fas fa-user-check text-white text-2xl"></i>
-                <h1 class="text-white text-xl font-bold">FaceAttend</h1>
-            </div>
-            
-            <div class="flex space-x-4">
-                <button id="enrollBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-user-plus mr-2"></i>Enroll
-                </button>
-                <button id="attendanceBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-clipboard-list mr-2"></i>Attendance
-                </button>
-                <button id="recognizeBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-camera mr-2"></i>Recognize
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="glass-effect p-8 rounded-xl text-center">
-            <div class="loading-spinner mx-auto mb-4"></div>
-            <p class="text-white text-lg">Loading AI Models...</p>
-            <p id="loadingProgress" class="text-gray-300 text-sm mt-2">Initializing...</p>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="container mx-auto px-4">
-        <!-- Enrollment Section -->
-        <div id="enrollSection" class="glass-effect p-6 rounded-xl mb-6 hidden">
-            <h2 class="text-white text-2xl font-bold mb-4">
-                <i class="fas fa-user-plus mr-2"></i>Student Enrollment
-            </h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                    <div class="relative mb-4">
-                        <video id="enrollVideo" width="100%" height="300" autoplay muted class="rounded-lg bg-black"></video>
-                        <canvas id="enrollCanvas" class="absolute top-0 left-0 rounded-lg"></canvas>
-                    </div>
-                    
-                    <div class="flex justify-center space-x-4">
-                        <button id="startEnrollCamera" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-video mr-2"></i>Start Camera
-                        </button>
-                        <button id="captureEnroll" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg" disabled>
-                            <i class="fas fa-camera mr-2"></i>Capture Face
-                        </button>
-                    </div>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="glass-effect">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <i class="fas fa-user-check"></i>
+                    <h1>FaceAttend</h1>
                 </div>
                 
-                <div>
-                    <form id="enrollForm" class="space-y-4">
-                        <div>
-                            <label class="block text-white text-sm font-bold mb-2">Student Name</label>
-                            <input type="text" id="studentName" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-white text-sm font-bold mb-2">Student ID</label>
-                            <input type="text" id="studentId" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-white text-sm font-bold mb-2">Class</label>
-                            <input type="text" id="studentClass" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-white text-sm font-bold mb-2">Email</label>
-                            <input type="email" id="studentEmail" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                        </div>
-                        
-                        <button type="submit" id="submitEnroll" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg" disabled>
-                            <i class="fas fa-save mr-2"></i>Save Student
-                        </button>
-                    </form>
+                <div class="nav-buttons">
+                    <button id="enrollBtn">
+                        <i class="fas fa-user-plus"></i>Enroll
+                    </button>
+                    <button id="attendanceBtn">
+                        <i class="fas fa-clipboard-list"></i>Attendance
+                    </button>
+                    <button id="recognizeBtn">
+                        <i class="fas fa-camera"></i>Recognize
+                    </button>
                 </div>
+            </div>
+        </nav>
+
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="loading-content">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p>Loading AI Models...</p>
+                <p id="loadingProgress">Initializing...</p>
             </div>
         </div>
 
-        <!-- Recognition Section -->
-        <div id="recognizeSection" class="glass-effect p-6 rounded-xl mb-6">
-            <h2 class="text-white text-2xl font-bold mb-4">
-                <i class="fas fa-camera mr-2"></i>Face Recognition AI
-            </h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                    <div class="relative mb-4">
-                        <video id="recognizeVideo" width="100%" height="300" autoplay muted class="rounded-lg bg-black"></video>
-                        <canvas id="recognizeCanvas" class="absolute top-0 left-0 rounded-lg"></canvas>
-                    </div>
-                    
-                    <div class="flex justify-center space-x-4">
-                        <button id="startRecognizeCamera" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-video mr-2"></i>Start Recognition
-                        </button>
-                        <button id="stopRecognizeCamera" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg" disabled>
-                            <i class="fas fa-stop mr-2"></i>Stop Camera
-                        </button>
-                    </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Enrollment Section -->
+            <div id="enrollSection" class="section hidden">
+                <h2>
+                    <i class="fas fa-user-plus"></i>Student Enrollment
+                </h2>
+                
+                <div class="video-container">
+                    <video id="enrollVideo" autoplay muted></video>
+                    <canvas id="enrollCanvas"></canvas>
                 </div>
                 
-                <div id="recognitionResults" class="space-y-4">
-                    <h3 class="text-white text-lg font-bold">Recognition Results</h3>
-                    <div id="recognizedStudent" class="hidden glass-effect p-4 rounded-lg">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-                                <i class="fas fa-user text-white text-2xl"></i>
+                <div class="button-group">
+                    <button id="startEnrollCamera" class="bg-green-500 hover:bg-green-600">
+                        <i class="fas fa-video"></i>Start Camera
+                    </button>
+                    <button id="captureEnroll" class="bg-blue-500 hover:bg-blue-600" disabled>
+                        <i class="fas fa-camera"></i>Capture Face
+                    </button>
+                </div>
+                
+                <form id="enrollForm" class="form-container">
+                    <div class="form-group">
+                        <label>Student Name</label>
+                        <input type="text" id="studentName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Student ID</label>
+                        <input type="text" id="studentId" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Class</label>
+                        <input type="text" id="studentClass" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="studentEmail">
+                    </div>
+                    
+                    <button type="submit" id="submitEnroll" class="bg-green-500 hover:bg-green-600" style="width: 100%; padding: 10px; border: none; border-radius: 6px; color: white; font-size: 14px;" disabled>
+                        <i class="fas fa-save" style="margin-right: 8px;"></i>Save Student
+                    </button>
+                </form>
+            </div>
+
+            <!-- Recognition Section -->
+            <div id="recognizeSection" class="section">
+                <h2>
+                    <i class="fas fa-camera"></i>Face Recognition
+                </h2>
+                
+                <div class="video-container">
+                    <video id="recognizeVideo" autoplay muted></video>
+                    <canvas id="recognizeCanvas"></canvas>
+                </div>
+                
+                <div class="button-group">
+                    <button id="startRecognizeCamera" class="bg-blue-500 hover:bg-blue-600">
+                        <i class="fas fa-video"></i>Start Recognition
+                    </button>
+                    <button id="stopRecognizeCamera" class="bg-red-500 hover:bg-red-600" disabled>
+                        <i class="fas fa-stop"></i>Stop Camera
+                    </button>
+                </div>
+                
+                <div id="recognitionResults">
+                    <h3>Recognition Results</h3>
+                    <div id="recognizedStudent" class="hidden">
+                        <div class="student-info">
+                            <div class="student-avatar">
+                                <i class="fas fa-user"></i>
                             </div>
-                            <div>
-                                <h4 id="recognizedName" class="text-white text-lg font-bold"></h4>
-                                <p id="recognizedId" class="text-gray-300"></p>
-                                <p id="recognizedClass" class="text-gray-300"></p>
-                                <p id="recognizedConfidence" class="text-green-400 text-sm"></p>
+                            <div class="student-details">
+                                <h4 id="recognizedName"></h4>
+                                <p id="recognizedId"></p>
+                                <p id="recognizedClass"></p>
+                                <p id="recognizedConfidence"></p>
                             </div>
                         </div>
-                        <button id="markAttendance" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg">
-                            <i class="fas fa-check mr-2"></i>Mark Attendance
+                        <button id="markAttendance" class="bg-green-500 hover:bg-green-600" style="width: 100%; padding: 8px; border: none; border-radius: 6px; color: white; font-size: 12px;">
+                            <i class="fas fa-check" style="margin-right: 4px;"></i>Mark Attendance
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Attendance Section -->
-        <div id="attendanceSection" class="glass-effect p-6 rounded-xl hidden">
-            <h2 class="text-white text-2xl font-bold mb-4">
-                <i class="fas fa-clipboard-list mr-2"></i>Attendance Records
-            </h2>
-            
-            <div class="mb-4 flex flex-wrap gap-4">
-                <input type="date" id="attendanceDate" class="px-3 py-2 border rounded-lg">
-                <button id="exportAttendance" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-download mr-2"></i>Export CSV
-                </button>
-                <button id="clearAttendance" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-trash mr-2"></i>Clear Data
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-white">
-                    <thead>
-                        <tr class="bg-gray-700">
-                            <th class="px-4 py-2 text-left">Photo</th>
-                            <th class="px-4 py-2 text-left">Name</th>
-                            <th class="px-4 py-2 text-left">Student ID</th>
-                            <th class="px-4 py-2 text-left">Class</th>
-                            <th class="px-4 py-2 text-left">Status</th>
-                            <th class="px-4 py-2 text-left">Time</th>
-                            <th class="px-4 py-2 text-left">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceTableBody">
-                        <!-- Attendance records will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Install PWA Popup -->
-    <div id="install-popup-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="glass-effect p-6 rounded-xl max-w-md mx-4">
-            <h3 class="text-white text-xl font-bold mb-4">Install FaceAttend</h3>
-            <p class="text-gray-300 mb-6">Install this app on your device for quick access and offline functionality.</p>
-            <div class="flex space-x-4">
-                <button id="installConfirm" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">
-                    <i class="fas fa-download mr-2"></i>Install
-                </button>
-                <button onclick="hideInstallPopup()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg">
-                    Cancel
-                </button>
+            <!-- Attendance Section -->
+            <div id="attendanceSection" class="section hidden">
+                <h2>
+                    <i class="fas fa-clipboard-list"></i>Attendance Records
+                </h2>
+                
+                <div class="attendance-controls">
+                    <input type="date" id="attendanceDate">
+                    <button id="exportAttendance" class="bg-blue-500 hover:bg-blue-600">
+                        <i class="fas fa-download"></i>Export CSV
+                    </button>
+                    <button id="clearAttendance" class="bg-red-500 hover:bg-red-600">
+                        <i class="fas fa-trash"></i>Clear Data
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Name</th>
+                                <th>ID</th>
+                                <th>Class</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <!-- Attendance records will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Install Button -->
-    <div id="install-button-container" class="fixed bottom-4 right-4 hidden">
-        <button onclick="showInstallPopup()" class="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg pulse-ring">
-            <i class="fas fa-download text-xl"></i>
-        </button>
-    </div>
+        <!-- Install PWA Popup -->
+        <div id="install-popup-overlay" class="hidden">
+            <div class="install-popup">
+                <h3>Install FaceAttend</h3>
+                <p>Install this app on your device for quick access and offline functionality.</p>
+                <div class="install-buttons">
+                    <button id="installConfirm">
+                        <i class="fas fa-download" style="margin-right: 4px;"></i>Install
+                    </button>
+                    <button onclick="hideInstallPopup()" class="bg-gray-500 hover:bg-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    <!-- Success/Error Messages -->
-    <div id="messageContainer" class="fixed top-20 right-4 z-40"></div>
+        <!-- Install Button -->
+        <div id="install-button-container" class="hidden">
+            <button onclick="showInstallPopup()" class="pulse-ring">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div id="messageContainer"></div>
+    </div>
 
     <script>
         // Global variables
