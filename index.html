@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmileTracker - Daily Login Rewards</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#000000">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Face-api.js library -->
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/dist/face-api.min.js"></script>
@@ -18,8 +18,9 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #000000;
             overflow: hidden;
+            color: white;
         }
 
         .container {
@@ -28,7 +29,7 @@
             height: 100vh;
             max-height: 770px;
             margin: 0 auto;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #000000;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
@@ -40,19 +41,64 @@
         .glass-effect {
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Welcome Popup */
+        .welcome-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .welcome-content {
             background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 300px;
+            margin: 16px;
+        }
+
+        .welcome-content h3 {
+            color: #ffd700;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .welcome-content p {
+            color: white;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .welcome-content button {
+            background: #ffd700;
+            color: #000;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
         /* Daily Quote Section */
         .daily-quote {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px);
             margin: 16px;
             padding: 16px;
             border-radius: 12px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .daily-quote h3 {
@@ -75,9 +121,9 @@
         /* Navigation */
         nav {
             padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .nav-container {
@@ -110,7 +156,7 @@
         }
 
         .coin-display {
-            background: rgba(255, 215, 0, 0.2);
+            background: rgba(255, 215, 0, 0.1);
             padding: 6px 10px;
             border-radius: 20px;
             display: flex;
@@ -138,9 +184,9 @@
         }
 
         .section {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 16px;
             border-radius: 12px;
             margin-bottom: 16px;
@@ -187,7 +233,7 @@
         }
 
         .login-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.03);
             padding: 12px;
             border-radius: 8px;
             text-align: center;
@@ -195,7 +241,7 @@
         }
 
         .login-card.completed {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.1);
             border-color: #10b981;
         }
 
@@ -241,17 +287,35 @@
             cursor: not-allowed;
         }
 
-        .btn-primary { background: #3b82f6; }
-        .btn-primary:hover:not(:disabled) { background: #2563eb; }
+        .btn-primary { 
+            background: #333333;
+            border: 1px solid #555555;
+        }
+        .btn-primary:hover:not(:disabled) { 
+            background: #444444;
+        }
         
-        .btn-success { background: #10b981; }
-        .btn-success:hover:not(:disabled) { background: #059669; }
+        .btn-success { 
+            background: #10b981;
+        }
+        .btn-success:hover:not(:disabled) { 
+            background: #059669;
+        }
 
-        .btn-danger { background: #ef4444; }
-        .btn-danger:hover:not(:disabled) { background: #dc2626; }
+        .btn-danger { 
+            background: #ef4444;
+        }
+        .btn-danger:hover:not(:disabled) { 
+            background: #dc2626;
+        }
 
-        .btn-warning { background: #f59e0b; }
-        .btn-warning:hover:not(:disabled) { background: #d97706; }
+        .btn-warning { 
+            background: #f59e0b;
+            color: #000;
+        }
+        .btn-warning:hover:not(:disabled) { 
+            background: #d97706;
+        }
 
         /* Progress Section */
         .progress-section {
@@ -280,10 +344,10 @@
             text-align: center;
         }
 
-        /* Gift Buttons */
+        /* Gift Journey Section */
         .gift-section {
-            background: rgba(255, 215, 0, 0.1);
-            border: 2px solid rgba(255, 215, 0, 0.3);
+            background: rgba(255, 215, 0, 0.05);
+            border: 2px solid rgba(255, 215, 0, 0.2);
             padding: 16px;
             border-radius: 12px;
             text-align: center;
@@ -297,44 +361,144 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            cursor: pointer;
         }
 
-        .gift-buttons {
-            display: flex;
-            flex-direction: column;
+        .gift-journey {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .gift-journey.open {
+            display: block;
+        }
+
+        .gift-levels {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
+            margin-bottom: 16px;
         }
 
-        .gift-btn {
-            background: linear-gradient(45deg, #ffd700, #ffed4e);
-            color: #1f2937;
-            padding: 12px;
-            border: none;
+        .gift-level {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px;
             border-radius: 8px;
-            font-weight: bold;
+            text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+        }
+
+        .gift-level:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .gift-level.unlocked {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+
+        .gift-level.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .gift-level i {
+            font-size: 16px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .gift-level span {
+            font-size: 10px;
+            color: white;
+        }
+
+        .gift-level.unlocked span {
+            color: #ffd700;
+        }
+
+        /* Gift Popup */
+        .gift-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            z-index: 200;
         }
 
-        .gift-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        .gift-popup {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 16px;
+            max-width: 320px;
+            max-height: 500px;
+            margin: 16px;
+            overflow-y: auto;
         }
 
-        .gift-btn:disabled {
+        .gift-popup h3 {
+            color: #ffd700;
+            font-size: 18px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .gift-popup-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .gift-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .gift-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .gift-item img {
+            width: 100%;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 8px;
             background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.5);
-            cursor: not-allowed;
+        }
+
+        .gift-item h4 {
+            color: white;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .gift-item p {
+            color: #d1d5db;
+            font-size: 10px;
         }
 
         /* Loading Spinner */
         .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #ffd700;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -346,7 +510,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* PWA Install Popup */
+        /* PWA Install Styles */
         .pulse-ring {
             animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
@@ -387,14 +551,14 @@
 
         .message.success { background: #10b981; }
         .message.error { background: #ef4444; }
-        .message.warning { background: #f59e0b; }
+        .message.warning { background: #f59e0b; color: #000; }
         .message.info { background: #3b82f6; }
 
         /* Loading Screen */
         #loadingScreen {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -402,12 +566,12 @@
         }
 
         .loading-content {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             padding: 24px;
             border-radius: 12px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .loading-content p {
@@ -426,7 +590,7 @@
         #install-popup-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -434,7 +598,7 @@
         }
 
         .install-popup {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.9);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 20px;
@@ -488,17 +652,18 @@
         }
 
         #install-button-container button {
-            background: #3b82f6;
+            background: #333333;
             color: white;
             padding: 12px;
             border: none;
             border-radius: 50%;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid #555555;
         }
 
         #install-button-container button:hover {
-            background: #2563eb;
+            background: #444444;
         }
 
         /* Utility classes */
@@ -516,8 +681,17 @@
 </head>
 <body>
     <div class="container">
+        <!-- Welcome Popup -->
+        <div id="welcomePopup" class="welcome-popup">
+            <div class="welcome-content">
+                <h3><i class="fas fa-smile-beam"></i> Quick Smile Check!</h3>
+                <p>Welcome to SmileTracker! It only takes 5 seconds to capture your smile and earn coins. Don't waste your time - smile instantly and close app!</p>
+                <button onclick="closeWelcomePopup()">Let's Start!</button>
+            </div>
+        </div>
+
         <!-- Loading Screen -->
-        <div id="loadingScreen">
+        <div id="loadingScreen" class="hidden">
             <div class="loading-content">
                 <div class="loading-spinner"></div>
                 <p>Loading AI Models...</p>
@@ -560,11 +734,11 @@
                 <div class="login-status">
                     <div class="login-card" id="morningLogin">
                         <h4>Morning Login</h4>
-                        <p id="morningStatus">Available until 8 AM</p>
+                        <p id="morningStatus">5 AM - 8 AM</p>
                     </div>
                     <div class="login-card" id="eveningLogin">
                         <h4>Evening Login</h4>
-                        <p id="eveningStatus">Available after 8 PM</p>
+                        <p id="eveningStatus">8 PM - 11 PM</p>
                     </div>
                 </div>
                 
@@ -593,7 +767,7 @@
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
-                <div class="progress-text" id="progressText">0 / 20 coins collected</div>
+                <div class="progress-text" id="progressText">0 / 10 coins for next gift</div>
                 
                 <div style="margin-top: 12px; color: white; font-size: 12px; text-align: center;">
                     <p>Daily Streak: <span id="streakCount">0</span> days</p>
@@ -601,25 +775,38 @@
                 </div>
             </div>
 
-            <!-- Gift Section -->
+            <!-- Gift Journey Section -->
             <div class="gift-section">
-                <h3><i class="fas fa-gift"></i>Continental Group Rewards</h3>
-                <div class="gift-buttons">
-                    <button class="gift-btn" id="gift1Btn" disabled onclick="openGift('gift1.html')">
-                        <i class="fas fa-gift"></i>
-                        Tech Gift #1 (20 coins + 10 days streak)
-                    </button>
-                    <button class="gift-btn" id="gift2Btn" disabled onclick="openGift('gift2.html')">
-                        <i class="fas fa-star"></i>
-                        Tech Gift #2 (Next reward)
-                    </button>
-                </div>
+                <h3 onclick="toggleGiftJourney()" style="cursor: pointer;">
+                    <i class="fas fa-gift"></i>Continental Group Gift Journey
+                    <i class="fas fa-chevron-down" id="giftToggleIcon"></i>
+                </h3>
                 
-                <!-- Testing Button (Remove in production) -->
-                <div style="margin-top: 12px;">
-                    <button class="btn btn-warning" id="testGiftBtn" onclick="testGiftUnlock()">
-                        <i class="fas fa-flask"></i>Test Gift Unlock (1 coin)
+                <div class="gift-journey" id="giftJourney">
+                    <div class="gift-levels" id="giftLevels">
+                        <!-- Gift levels will be generated by JavaScript -->
+                    </div>
+                    
+                    <button class="btn btn-warning" onclick="showGiftList()" style="width: 100%; margin-top: 12px;">
+                        <i class="fas fa-list"></i>View All Gifts
                     </button>
+                    
+                    <div style="margin-top: 12px; color: #d1d5db; font-size: 11px; text-align: center;">
+                        <p><i class="fas fa-info-circle"></i> You can break your streak after 10 days to start fresh for the next gift!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gift List Popup -->
+        <div id="giftListPopup" class="gift-popup-overlay hidden">
+            <div class="gift-popup">
+                <button class="gift-popup-close" onclick="closeGiftList()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h3><i class="fas fa-gifts"></i> All Available Gifts</h3>
+                <div class="gift-list" id="giftList">
+                    <!-- Gift items will be generated by JavaScript -->
                 </div>
             </div>
         </div>
@@ -663,6 +850,8 @@
         let userStreak = parseInt(localStorage.getItem('userStreak') || '0');
         let lastLoginDate = localStorage.getItem('lastLoginDate');
         let todayLogins = JSON.parse(localStorage.getItem('todayLogins') || '{}');
+       
+        let hasCompletedSmileToday = false;
 
         // Daily Quotes Array
         const dailyQuotes = [
@@ -715,8 +904,15 @@
             });
         }
 
+        // Welcome Popup
+        function closeWelcomePopup() {
+            document.getElementById('welcomePopup').classList.add('hidden');
+            loadModels();
+        }
+
         // Initialize Face-api models
         async function loadModels() {
+            document.getElementById('loadingScreen').classList.remove('hidden');
             const loadingProgress = document.getElementById('loadingProgress');
             
             try {
@@ -749,6 +945,8 @@
             updateUI();
             updateLoginStatus();
             checkStreakReset();
+            generateGiftLevels();
+            generateGiftList();
             toggleInstallButton();
         }
 
@@ -793,7 +991,9 @@
                 document.getElementById('stopCamera').disabled = false;
                 
                 // Start smile detection
-                detectionInterval = setInterval(detectSmile, 100); // Check every 100ms for better accuracy
+                detectionInterval = setInterval(detectSmile, 100);
+                
+                
                 
                 showMessage('Camera started! Show your beautiful smile! 😊', 'success');
                 
@@ -813,6 +1013,8 @@
                 clearInterval(detectionInterval);
                 detectionInterval = null;
             }
+            
+            
             
             document.getElementById('startCamera').disabled = false;
             document.getElementById('stopCamera').disabled = true;
@@ -845,14 +1047,14 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 if (detections.length === 0) {
-                    statusDiv.textContent = 'No face detected. Please position your face in the camera.';
+                    statusDiv.textContent = 'No face detected. Look at the camera!';
                     statusDiv.style.color = '#f59e0b';
                     isSmiling = false;
                     return;
                 }
 
                 if (detections.length > 1) {
-                    statusDiv.textContent = 'Multiple faces detected. Please ensure only one person is in frame.';
+                    statusDiv.textContent = 'Multiple faces detected. Only one person please!';
                     statusDiv.style.color = '#f59e0b';
                     isSmiling = false;
                     return;
@@ -869,32 +1071,36 @@
                 // Get smile confidence (happy expression)
                 const expressions = detection.expressions;
                 const smileConfidence = expressions.happy;
-                const smileThreshold = 0.7; // 70% confidence threshold
+                const smileThreshold = 0.8; // 80% confidence threshold for instant detection
 
                 // Update status based on smile detection
-                if (smileConfidence > smileThreshold) {
-                    if (!isSmiling) {
-                        isSmiling = true;
-                        const now = Date.now();
-                        
-                        // Prevent rapid multiple detections (minimum 2 seconds between smiles)
-                        if (now - lastSmileTime > 2000) {
-                            lastSmileTime = now;
-                            handleSmileDetected();
-                        }
-                    }
+                if (smileConfidence > smileThreshold && !hasCompletedSmileToday) {
+                    hasCompletedSmileToday = true;
                     
-                    statusDiv.innerHTML = `😊 Great Smile! Confidence: ${Math.round(smileConfidence * 100)}%`;
+                    // Clear timeout since smile was detected
+                    
+                    
+                    handleSmileDetected();
+                    
+                    statusDiv.innerHTML = `🎉 EXCELLENT! Very good, keep smiling like that! Confidence: ${Math.round(smileConfidence * 100)}%`;
                     statusDiv.style.color = '#10b981';
                     
-                    // Draw smile indicator
-                    ctx.fillStyle = '#10b981';
-                    ctx.fillText('😊 SMILE!', x, y - 10);
+                    // Draw celebration effect
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = '20px Arial';
+                    ctx.fillText('🎉 GREAT SMILE! 🎉', x, y - 20);
                     
-                } else {
-                    isSmiling = false;
-                    statusDiv.innerHTML = `Keep smiling! Confidence: ${Math.round(smileConfidence * 100)}% (Need 70%+)`;
+                    // Stop camera after successful detection
+                    setTimeout(() => {
+                        stopCamera();
+                    }, 2000);
+                    
+                } else if (smileConfidence > 0.6) {
+                    statusDiv.innerHTML = `😊 Almost there! Keep smiling! Confidence: ${Math.round(smileConfidence * 100)}% (Need 80%+)`;
                     statusDiv.style.color = '#3b82f6';
+                } else {
+                    statusDiv.innerHTML = `😐 Smile bigger! Confidence: ${Math.round(smileConfidence * 100)}% (Need 80%+)`;
+                    statusDiv.style.color = '#f59e0b';
                 }
 
             } catch (error) {
@@ -915,21 +1121,22 @@
                 todayLogins = {};
                 lastLoginDate = today;
                 localStorage.setItem('lastLoginDate', today);
+                hasCompletedSmileToday = false;
             }
 
             let loginType = '';
             let canLogin = false;
 
-            // Check if it's morning login time (before 8 AM)
-            if (currentHour < 8 && !todayLogins.morning) {
+            // Check if it's morning login time (5 AM to 8 AM)
+            if (currentHour >= 5 && currentHour < 8 && !todayLogins.morning) {
                 loginType = 'morning';
                 canLogin = true;
                 todayLogins.morning = true;
                 document.getElementById('morningLogin').classList.add('completed');
                 document.getElementById('morningStatus').textContent = '✓ Completed';
                 
-            // Check if it's evening login time (after 8 PM)
-            } else if (currentHour >= 20 && !todayLogins.evening) {
+            // Check if it's evening login time (8 PM to 11 PM)
+            } else if (currentHour >= 20 && currentHour < 23 && !todayLogins.evening) {
                 loginType = 'evening';
                 canLogin = true;
                 todayLogins.evening = true;
@@ -938,15 +1145,15 @@
             }
 
             if (canLogin) {
-                // Award coins
-                userCoins += 2;
+                // Award 1 coin (as requested)
+                userCoins += 1;
                 
                 // Update streak if both logins completed today
                 if (todayLogins.morning && todayLogins.evening) {
                     userStreak += 1;
-                    showMessage(`🎉 Daily challenge complete! +2 coins. Streak: ${userStreak} days`, 'success');
+                    showMessage(`🎉 Daily challenge complete! +1 coin. Streak: ${userStreak} days`, 'success');
                 } else {
-                    showMessage(`😊 ${loginType === 'morning' ? 'Morning' : 'Evening'} smile logged! +2 coins`, 'success');
+                    showMessage(`😊 ${loginType === 'morning' ? 'Morning' : 'Evening'} smile logged! +1 coin`, 'success');
                 }
                 
                 // Save data
@@ -960,7 +1167,9 @@
                 
             } else {
                 if (currentHour >= 8 && currentHour < 20) {
-                    showMessage('Evening login is available after 8 PM!', 'warning');
+                    showMessage('Evening login is available from 8 PM to 11 PM!', 'warning');
+                } else if (currentHour >= 23 || currentHour < 5) {
+                    showMessage('Come back during login hours: 5-8 AM or 8-11 PM!', 'warning');
                 } else if (todayLogins[loginType]) {
                     showMessage(`You've already completed your ${loginType} login today!`, 'warning');
                 }
@@ -972,11 +1181,12 @@
             document.getElementById('coinCount').textContent = userCoins;
             document.getElementById('streakCount').textContent = userStreak;
             
-            const progress = (userCoins % 20) / 20 * 100;
+            const coinsNeeded = 10; // 10 days for each gift
+            const progress = (userStreak % coinsNeeded) / coinsNeeded * 100;
             document.getElementById('progressFill').style.width = `${progress}%`;
-            document.getElementById('progressText').textContent = `${userCoins % 20} / 20 coins collected`;
+            document.getElementById('progressText').textContent = `${userStreak % coinsNeeded} / ${coinsNeeded} days for next gift`;
             
-            const daysToNextGift = Math.max(0, 10 - userStreak);
+            const daysToNextGift = Math.max(0, coinsNeeded - (userStreak % coinsNeeded));
             document.getElementById('daysToGift').textContent = daysToNextGift;
         }
 
@@ -989,6 +1199,7 @@
             // Reset if new day
             if (lastLoginDate !== today) {
                 todayLogins = {};
+                hasCompletedSmileToday = false;
             }
 
             // Update morning login status
@@ -999,10 +1210,13 @@
                 morningCard.classList.add('completed');
                 morningStatus.textContent = '✓ Completed';
             } else if (currentHour >= 8) {
-                morningStatus.textContent = 'Missed (until 8 AM)';
+                morningStatus.textContent = 'Missed (5-8 AM)';
                 morningStatus.style.color = '#ef4444';
+            } else if (currentHour >= 5) {
+                morningStatus.textContent = 'Available now!';
+                morningStatus.style.color = '#10b981';
             } else {
-                morningStatus.textContent = 'Available until 8 AM';
+                morningStatus.textContent = '5 AM - 8 AM';
             }
 
             // Update evening login status
@@ -1012,24 +1226,89 @@
             if (todayLogins.evening) {
                 eveningCard.classList.add('completed');
                 eveningStatus.textContent = '✓ Completed';
+            } else if (currentHour >= 23) {
+                eveningStatus.textContent = 'Missed (8-11 PM)';
+                eveningStatus.style.color = '#ef4444';
             } else if (currentHour >= 20) {
                 eveningStatus.textContent = 'Available now!';
                 eveningStatus.style.color = '#10b981';
             } else {
-                eveningStatus.textContent = 'Available after 8 PM';
+                eveningStatus.textContent = '8 PM - 11 PM';
             }
+        }
+
+        // Generate Gift Levels (20 gifts)
+        function generateGiftLevels() {
+            const giftLevelsContainer = document.getElementById('giftLevels');
+            giftLevelsContainer.innerHTML = '';
+            
+            for (let i = 1; i <= 20; i++) {
+                const giftLevel = document.createElement('div');
+                const requiredDays = i * 10;
+                const isUnlocked = userStreak >= requiredDays;
+                
+                giftLevel.className = `gift-level ${isUnlocked ? 'unlocked' : 'locked'}`;
+                giftLevel.innerHTML = `
+                    <i class="fas fa-gift"></i>
+                    <span>Gift ${i}</span>
+                `;
+                
+                if (isUnlocked) {
+                    giftLevel.onclick = () => openGift(`gift${i}.html`);
+                }
+                
+                giftLevelsContainer.appendChild(giftLevel);
+            }
+        }
+
+        // Generate Gift List for Popup
+        function generateGiftList() {
+            const giftList = document.getElementById('giftList');
+            giftList.innerHTML = '';
+            
+            for (let i = 1; i <= 20; i++) {
+                const giftItem = document.createElement('div');
+                giftItem.className = 'gift-item';
+                giftItem.innerHTML = `
+                    <img src="gift${i}-image.jpg" alt="Gift ${i}" onerror="this.style.display='none'">
+                    <h4>Tech Gift ${i}</h4>
+                    <p>${i * 10} days streak</p>
+                `;
+                giftList.appendChild(giftItem);
+            }
+        }
+
+        // Gift Journey Functions
+        function toggleGiftJourney() {
+            const journey = document.getElementById('giftJourney');
+            const icon = document.getElementById('giftToggleIcon');
+            
+            if (journey.classList.contains('open')) {
+                journey.classList.remove('open');
+                icon.className = 'fas fa-chevron-down';
+            } else {
+                journey.classList.add('open');
+                icon.className = 'fas fa-chevron-up';
+            }
+        }
+
+        function showGiftList() {
+            document.getElementById('giftListPopup').classList.remove('hidden');
+        }
+
+        function closeGiftList() {
+            document.getElementById('giftListPopup').classList.add('hidden');
         }
 
         // Check Gift Eligibility
         function checkGiftEligibility() {
-            // Gift 1: 20 coins + 10 days streak
-            if (userCoins >= 20 && userStreak >= 10) {
-                document.getElementById('gift1Btn').disabled = false;
-                showMessage('🎁 Congratulations! Gift #1 is now available!', 'success');
-            }
+            generateGiftLevels(); // Refresh gift levels
             
-            // Gift 2: After first gift + another 10 days
-            // This logic can be customized based on your requirements
+            // Check if any new gift is unlocked
+            const newGiftNumber = Math.floor(userStreak / 10);
+            if (newGiftNumber > 0) {
+                showMessage(`🎁 Gift ${newGiftNumber} is now available! You can break your streak to start fresh for the next gift.`, 'success');
+            }
         }
 
         // Check Streak Reset
@@ -1049,16 +1328,6 @@
         // Gift Functions
         function openGift(giftPage) {
             window.location.href = giftPage;
-        }
-
-        // Testing Function (Comment: Change userCoins >= 1 to userCoins >= 20 and userStreak >= 10 for production)
-        function testGiftUnlock() {
-            if (userCoins >= 1) { // Testing with 1 coin - change to 20 for production
-                document.getElementById('gift1Btn').disabled = false;
-                showMessage('🧪 Test mode: Gift #1 unlocked with 1 coin!', 'warning');
-            } else {
-                showMessage('Not enough coins for testing. Earn at least 1 coin.', 'error');
-            }
         }
 
         // Message System
@@ -1125,6 +1394,7 @@
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 hideInstallPopup();
+                closeGiftList();
             }
         });
 
@@ -1136,11 +1406,12 @@
             if (detectionInterval) {
                 clearInterval(detectionInterval);
             }
+            
         });
 
         // Initialize app when page loads
         window.addEventListener('load', () => {
-            loadModels();
+            // App will initialize after welcome popup is closed
         });
     </script>
 </body>
