@@ -3,12 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmileTracker - Daily Login Rewards</title>
+    <title>FaceAttend - Smart Attendance System</title>
+    <meta name="description" content="AI-powered face recognition attendance system">
+    <meta name="theme-color" content="#3B82F6">
+    
+    <!-- PWA Meta Tags -->
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Face-api.js library -->
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FaceAttend">
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/dist/face-api.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Face-api.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         * {
             margin: 0;
@@ -18,9 +33,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #000000;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             overflow: hidden;
-            color: white;
         }
 
         .container {
@@ -29,7 +43,7 @@
             height: 100vh;
             max-height: 770px;
             margin: 0 auto;
-            background: #000000;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
@@ -41,95 +55,72 @@
         .glass-effect {
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Welcome Popup */
-        .welcome-popup {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
-        .welcome-content {
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            padding: 24px;
-            border-radius: 16px;
-            text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 300px;
-            margin: 16px;
         }
-
-        .welcome-content h3 {
-            color: #ffd700;
-            font-size: 18px;
-            margin-bottom: 16px;
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
-        .welcome-content p {
-            color: white;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 20px;
+        
+        .pulse-ring {
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
-
-        .welcome-content button {
-            background: #ffd700;
-            color: #000;
-            padding: 10px 20px;
-            border: none;
+        
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.33);
+                opacity: 1;
+            }
+            80%, 100% {
+                transform: scale(2.4);
+                opacity: 0;
+            }
+        }
+        
+        .face-box {
+            position: absolute;
+            border: 3px solid #10b981;
+            background: rgba(16, 185, 129, 0.1);
             border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
         }
-
-        /* Daily Quote Section */
-        .daily-quote {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            margin: 16px;
-            padding: 16px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
         }
-
-        .daily-quote h3 {
-            color: #ffd700;
-            font-size: 14px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
-        .daily-quote p {
-            color: white;
-            font-size: 12px;
-            line-height: 1.4;
-            font-style: italic;
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         /* Navigation */
         nav {
             padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .nav-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .nav-brand {
@@ -139,7 +130,7 @@
         }
 
         .nav-brand i {
-            color: #ffd700;
+            color: white;
             font-size: 18px;
         }
 
@@ -149,34 +140,86 @@
             font-weight: bold;
         }
 
-        .nav-stats {
+        .nav-buttons {
             display: flex;
-            gap: 12px;
-            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
         }
 
-        .coin-display {
-            background: rgba(255, 215, 0, 0.1);
+        .nav-buttons button {
             padding: 6px 10px;
-            border-radius: 20px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             gap: 4px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
         }
 
-        .coin-display i {
-            color: #ffd700;
-            font-size: 12px;
+        .nav-buttons button i {
+            font-size: 10px;
         }
 
-        .coin-display span {
+        #enrollBtn {
+            background: #10b981;
+        }
+
+        #enrollBtn:hover {
+            background: #059669;
+        }
+
+        #attendanceBtn {
+            background: #3b82f6;
+        }
+
+        #attendanceBtn:hover {
+            background: #2563eb;
+        }
+
+        #recognizeBtn {
+            background: #8b5cf6;
+        }
+
+        #recognizeBtn:hover {
+            background: #7c3aed;
+        }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .loading-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .loading-content p {
             color: white;
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 14px;
+            margin-top: 12px;
         }
 
-        /* Smile Recognition Section */
+        #loadingProgress {
+            color: #d1d5db;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* Main Content */
         .main-content {
             flex: 1;
             padding: 16px;
@@ -184,9 +227,9 @@
         }
 
         .section {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 16px;
             border-radius: 12px;
             margin-bottom: 16px;
@@ -202,7 +245,11 @@
             gap: 8px;
         }
 
-        /* Video Container */
+        .section h2 i {
+            font-size: 16px;
+        }
+
+        /* Video containers */
         .video-container {
             position: relative;
             margin-bottom: 16px;
@@ -210,54 +257,18 @@
             overflow: hidden;
         }
 
-        #smileVideo {
+        #enrollVideo, #recognizeVideo {
             width: 100%;
-            height: 250px;
+            height: 200px;
             background: black;
             border-radius: 8px;
         }
 
-        #smileCanvas {
+        #enrollCanvas, #recognizeCanvas {
             position: absolute;
             top: 0;
             left: 0;
             border-radius: 8px;
-        }
-
-        /* Login Status */
-        .login-status {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .login-card {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .login-card.completed {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: #10b981;
-        }
-
-        .login-card h4 {
-            color: white;
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-
-        .login-card p {
-            color: #d1d5db;
-            font-size: 10px;
-        }
-
-        .login-card.completed p {
-            color: #10b981;
         }
 
         /* Buttons */
@@ -265,332 +276,183 @@
             display: flex;
             gap: 8px;
             justify-content: center;
+            flex-wrap: wrap;
             margin-bottom: 16px;
         }
 
-        .btn {
-            padding: 10px 16px;
-            font-size: 14px;
+        .button-group button {
+            padding: 8px 12px;
+            font-size: 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             color: white;
             cursor: pointer;
             transition: all 0.3s;
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-weight: 600;
+            gap: 4px;
+            flex: 1;
+            min-width: 120px;
+            justify-content: center;
         }
 
-        .btn:disabled {
+        .button-group button i {
+            font-size: 10px;
+        }
+
+        .button-group button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .btn-primary { 
-            background: #333333;
-            border: 1px solid #555555;
-        }
-        .btn-primary:hover:not(:disabled) { 
-            background: #444444;
-        }
-        
-        .btn-success { 
-            background: #10b981;
-        }
-        .btn-success:hover:not(:disabled) { 
-            background: #059669;
-        }
-
-        .btn-danger { 
-            background: #ef4444;
-        }
-        .btn-danger:hover:not(:disabled) { 
-            background: #dc2626;
-        }
-
-        .btn-warning { 
-            background: #f59e0b;
-            color: #000;
-        }
-        .btn-warning:hover:not(:disabled) { 
-            background: #d97706;
-        }
-
-        /* Progress Section */
-        .progress-section {
+        /* Form styles */
+        .form-container {
             margin-top: 16px;
         }
 
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 8px;
+        .form-group {
+            margin-bottom: 12px;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ffd700, #ffed4e);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
+        .form-group label {
+            display: block;
             color: white;
             font-size: 12px;
-            text-align: center;
-        }
-
-        /* Gift Journey Section */
-        .gift-section {
-            background: rgba(255, 215, 0, 0.05);
-            border: 2px solid rgba(255, 215, 0, 0.2);
-            padding: 16px;
-            border-radius: 12px;
-            text-align: center;
-            margin-top: 16px;
-        }
-
-        .gift-section h3 {
-            color: #ffd700;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-
-        .gift-journey {
-            display: none;
-            margin-top: 16px;
-        }
-
-        .gift-journey.open {
-            display: block;
-        }
-
-        .gift-levels {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .gift-level {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .gift-level:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .gift-level.unlocked {
-            background: rgba(255, 215, 0, 0.1);
-            border-color: #ffd700;
-            color: #ffd700;
-        }
-
-        .gift-level.locked {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .gift-level i {
-            font-size: 16px;
+            font-weight: bold;
             margin-bottom: 4px;
-            display: block;
         }
 
-        .gift-level span {
-            font-size: 10px;
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        /* Recognition Results */
+        #recognitionResults {
+            margin-top: 16px;
+        }
+
+        #recognitionResults h3 {
             color: white;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
         }
 
-        .gift-level.unlocked span {
-            color: #ffd700;
-        }
-
-        /* Gift Popup */
-        .gift-popup-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-        }
-
-        .gift-popup {
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(15px);
+        #recognizedStudent {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px;
-            border-radius: 16px;
-            max-width: 320px;
-            max-height: 500px;
-            margin: 16px;
-            overflow-y: auto;
-        }
-
-        .gift-popup h3 {
-            color: #ffd700;
-            font-size: 18px;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .gift-popup-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .gift-list {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-
-        .gift-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 12px;
             border-radius: 8px;
-            text-align: center;
         }
 
-        .gift-item img {
-            width: 100%;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.1);
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
-        .gift-item h4 {
-            color: white;
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-
-        .gift-item p {
-            color: #d1d5db;
-            font-size: 10px;
-        }
-
-        /* Loading Spinner */
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #ffd700;
+        .student-avatar {
+            width: 40px;
+            height: 40px;
+            background: #10b981;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* PWA Install Styles */
-        .pulse-ring {
-            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-        }
-
-        @keyframes pulse-ring {
-            0% {
-                transform: scale(0.33);
-                opacity: 1;
-            }
-            80%, 100% {
-                transform: scale(2.4);
-                opacity: 0;
-            }
-        }
-
-        /* Message Container */
-        #messageContainer {
-            position: fixed;
-            top: 80px;
-            right: 16px;
-            z-index: 50;
-            max-width: 280px;
-        }
-
-        .message {
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            color: white;
-            font-size: 12px;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .message.success { background: #10b981; }
-        .message.error { background: #ef4444; }
-        .message.warning { background: #f59e0b; color: #000; }
-        .message.info { background: #3b82f6; }
-
-        /* Loading Screen */
-        #loadingScreen {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 100;
         }
 
-        .loading-content {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 24px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .student-avatar i {
+            color: white;
+            font-size: 16px;
         }
 
-        .loading-content p {
+        .student-details h4 {
             color: white;
             font-size: 14px;
-            margin-top: 12px;
+            font-weight: bold;
+            margin-bottom: 2px;
         }
 
-        #loadingProgress {
+        .student-details p {
             color: #d1d5db;
             font-size: 12px;
-            margin-top: 8px;
+            margin-bottom: 1px;
         }
 
-        /* PWA Install Styles */
+        #recognizedConfidence {
+            color: #10b981 !important;
+        }
+
+        /* Attendance Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+
+        .attendance-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .attendance-controls input,
+        .attendance-controls button {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .attendance-controls input {
+            border: 1px solid #d1d5db;
+            background: white;
+        }
+
+        .attendance-controls button {
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        table {
+            width: 100%;
+            color: white;
+            font-size: 12px;
+        }
+
+        table th,
+        table td {
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        table th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        /* Install popup */
         #install-popup-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -598,7 +460,7 @@
         }
 
         .install-popup {
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 20px;
@@ -652,163 +514,224 @@
         }
 
         #install-button-container button {
-            background: #333333;
+            background: #3b82f6;
             color: white;
             padding: 12px;
             border: none;
             border-radius: 50%;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border: 1px solid #555555;
         }
 
         #install-button-container button:hover {
-            background: #444444;
+            background: #2563eb;
         }
 
-        /* Utility classes */
+        /* Message container */
+        #messageContainer {
+            position: fixed;
+            top: 80px;
+            right: 16px;
+            z-index: 40;
+            max-width: 280px;
+        }
+
+        /* Hidden class */
         .hidden {
             display: none !important;
         }
+
+        /* Utility classes */
+        .bg-green-500 { background: #10b981; }
+        .bg-green-600 { background: #059669; }
+        .bg-blue-500 { background: #3b82f6; }
+        .bg-blue-600 { background: #2563eb; }
+        .bg-purple-500 { background: #8b5cf6; }
+        .bg-purple-600 { background: #7c3aed; }
+        .bg-red-500 { background: #ef4444; }
+        .bg-red-600 { background: #dc2626; }
+        .bg-gray-500 { background: #6b7280; }
+        .bg-gray-600 { background: #4b5563; }
+
+        .hover\:bg-green-600:hover { background: #059669; }
+        .hover\:bg-blue-600:hover { background: #2563eb; }
+        .hover\:bg-purple-600:hover { background: #7c3aed; }
+        .hover\:bg-red-600:hover { background: #dc2626; }
+        .hover\:bg-gray-600:hover { background: #4b5563; }
 
         /* Responsive adjustments */
         @media (max-width: 375px) {
             .container {
                 max-width: 100vw;
             }
+            
+            .nav-buttons {
+                margin-top: 8px;
+                width: 100%;
+            }
+            
+            .nav-buttons button {
+                flex: 1;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Welcome Popup -->
-        <div id="welcomePopup" class="welcome-popup">
-            <div class="welcome-content">
-                <h3><i class="fas fa-smile-beam"></i> Quick Smile Check!</h3>
-                <p>Welcome to SmileTracker! It only takes 5 seconds to capture your smile and earn coins. Don't waste your time - smile instantly and close app!</p>
-                <button onclick="closeWelcomePopup()">Let's Start!</button>
+        <!-- Navigation -->
+        <nav class="glass-effect">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <i class="fas fa-user-check"></i>
+                    <h1>FaceAttend</h1>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button id="enrollBtn">
+                        <i class="fas fa-user-plus"></i>Enroll
+                    </button>
+                    <button id="attendanceBtn">
+                        <i class="fas fa-clipboard-list"></i>Attendance
+                    </button>
+                    <button id="recognizeBtn">
+                        <i class="fas fa-camera"></i>Recognize
+                    </button>
+                </div>
             </div>
-        </div>
+        </nav>
 
         <!-- Loading Screen -->
-        <div id="loadingScreen" class="hidden">
+        <div id="loadingScreen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="loading-content">
-                <div class="loading-spinner"></div>
+                <div class="loading-spinner mx-auto mb-4"></div>
                 <p>Loading AI Models...</p>
                 <p id="loadingProgress">Initializing...</p>
             </div>
         </div>
 
-        <!-- Daily Quote -->
-        <div class="daily-quote">
-            <h3><i class="fas fa-quote-left"></i> Daily Inspiration</h3>
-            <p id="dailyQuote">A smile is the universal welcome. Keep smiling and make the world brighter!</p>
-        </div>
-
-        <!-- Navigation -->
-        <nav class="glass-effect">
-            <div class="nav-container">
-                <div class="nav-brand">
-                    <i class="fas fa-smile-beam"></i>
-                    <h1>SmileTracker</h1>
-                </div>
-                
-                <div class="nav-stats">
-                    <div class="coin-display">
-                        <i class="fas fa-coins"></i>
-                        <span id="coinCount">0</span>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Smile Recognition Section -->
-            <div class="section">
+            <!-- Enrollment Section -->
+            <div id="enrollSection" class="section hidden">
                 <h2>
-                    <i class="fas fa-smile"></i>Smile Detection
+                    <i class="fas fa-user-plus"></i>Student Enrollment
                 </h2>
                 
-                <!-- Login Status -->
-                <div class="login-status">
-                    <div class="login-card" id="morningLogin">
-                        <h4>Morning Login</h4>
-                        <p id="morningStatus">5 AM - 8 AM</p>
-                    </div>
-                    <div class="login-card" id="eveningLogin">
-                        <h4>Evening Login</h4>
-                        <p id="eveningStatus">8 PM - 11 PM</p>
-                    </div>
-                </div>
-                
                 <div class="video-container">
-                    <video id="smileVideo" autoplay muted></video>
-                    <canvas id="smileCanvas"></canvas>
+                    <video id="enrollVideo" autoplay muted></video>
+                    <canvas id="enrollCanvas"></canvas>
                 </div>
                 
                 <div class="button-group">
-                    <button id="startCamera" class="btn btn-primary">
+                    <button id="startEnrollCamera" class="bg-green-500 hover:bg-green-600">
                         <i class="fas fa-video"></i>Start Camera
                     </button>
-                    <button id="stopCamera" class="btn btn-danger" disabled>
+                    <button id="captureEnroll" class="bg-blue-500 hover:bg-blue-600" disabled>
+                        <i class="fas fa-camera"></i>Capture Face
+                    </button>
+                </div>
+                
+                <form id="enrollForm" class="form-container">
+                    <div class="form-group">
+                        <label>Student Name</label>
+                        <input type="text" id="studentName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Student ID</label>
+                        <input type="text" id="studentId" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Class</label>
+                        <input type="text" id="studentClass" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="studentEmail">
+                    </div>
+                    
+                    <button type="submit" id="submitEnroll" class="bg-green-500 hover:bg-green-600" style="width: 100%; padding: 10px; border: none; border-radius: 6px; color: white; font-size: 14px;" disabled>
+                        <i class="fas fa-save" style="margin-right: 8px;"></i>Save Student
+                    </button>
+                </form>
+            </div>
+
+            <!-- Recognition Section -->
+            <div id="recognizeSection" class="section">
+                <h2>
+                    <i class="fas fa-camera"></i>Face Recognition
+                </h2>
+                
+                <div class="video-container">
+                    <video id="recognizeVideo" autoplay muted></video>
+                    <canvas id="recognizeCanvas"></canvas>
+                </div>
+                
+                <div class="button-group">
+                    <button id="startRecognizeCamera" class="bg-blue-500 hover:bg-blue-600">
+                        <i class="fas fa-video"></i>Start Recognition
+                    </button>
+                    <button id="stopRecognizeCamera" class="bg-red-500 hover:bg-red-600" disabled>
                         <i class="fas fa-stop"></i>Stop Camera
                     </button>
                 </div>
                 
-                <div id="smileStatus" class="text-center" style="color: white; margin-bottom: 16px;">
-                    Ready to detect your smile!
+                <div id="recognitionResults">
+                    <h3>Recognition Results</h3>
+                    <div id="recognizedStudent" class="hidden">
+                        <div class="student-info">
+                            <div class="student-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="student-details">
+                                <h4 id="recognizedName"></h4>
+                                <p id="recognizedId"></p>
+                                <p id="recognizedClass"></p>
+                                <p id="recognizedConfidence"></p>
+                            </div>
+                        </div>
+                        <button id="markAttendance" class="bg-green-500 hover:bg-green-600" style="width: 100%; padding: 8px; border: none; border-radius: 6px; color: white; font-size: 12px;">
+                            <i class="fas fa-check" style="margin-right: 4px;"></i>Mark Attendance
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Progress Section -->
-            <div class="section progress-section">
-                <h2><i class="fas fa-trophy"></i>Progress</h2>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                </div>
-                <div class="progress-text" id="progressText">0 / 10 coins for next gift</div>
+            <!-- Attendance Section -->
+            <div id="attendanceSection" class="section hidden">
+                <h2>
+                    <i class="fas fa-clipboard-list"></i>Attendance Records
+                </h2>
                 
-                <div style="margin-top: 12px; color: white; font-size: 12px; text-align: center;">
-                    <p>Daily Streak: <span id="streakCount">0</span> days</p>
-                    <p>Next Gift in: <span id="daysToGift">10</span> days</p>
-                </div>
-
-                <div class="gift-section">
-                <h3 onclick="toggleGiftJourney()" style="cursor: pointer;">
-                    <i class="fas fa-gift"></i>Continental Group Gift Journey
-                    <i class="fas fa-chevron-down" id="giftToggleIcon"></i>
-                </h3>
-                
-                <div class="gift-journey" id="giftJourney">
-                    <div class="gift-levels" id="giftLevels">
-                        <!-- Gift levels will be generated by JavaScript -->
-                    </div>
-                    
-                    <button class="btn btn-warning" onclick="showGiftList()" style="width: 100%; margin-top: 12px;">
-                        <i class="fas fa-list"></i>View All Gifts
+                <div class="attendance-controls">
+                    <input type="date" id="attendanceDate">
+                    <button id="exportAttendance" class="bg-blue-500 hover:bg-blue-600">
+                        <i class="fas fa-download"></i>Export CSV
                     </button>
-                    
-                    <div style="margin-top: 12px; color: #d1d5db; font-size: 11px; text-align: center;">
-                        <p><i class="fas fa-info-circle"></i> You can break your streak after 10 days to start fresh for the next gift!</p>
-                    </div>
+                    <button id="clearAttendance" class="bg-red-500 hover:bg-red-600">
+                        <i class="fas fa-trash"></i>Clear Data
+                    </button>
                 </div>
-            </div>
-            </div>
-
-            <!-- Gift Journey Section -->
-            
-        </div>
-
-        <!-- Gift List Popup -->
-        <div id="giftListPopup" class="gift-popup-overlay hidden">
-            <div class="gift-popup">
-                <button class="gift-popup-close" onclick="closeGiftList()">
-                    <i class="fas fa-times"></i>
-                </button>
-                <h3><i class="fas fa-gifts"></i> All Available Gifts</h3>
-                <div class="gift-list" id="giftList">
-                    <!-- Gift items will be generated by JavaScript -->
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Name</th>
+                                <th>ID</th>
+                                <th>Class</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <!-- Attendance records will be populated here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -816,13 +739,13 @@
         <!-- Install PWA Popup -->
         <div id="install-popup-overlay" class="hidden">
             <div class="install-popup">
-                <h3>Install SmileTracker</h3>
+                <h3>Install FaceAttend</h3>
                 <p>Install this app on your device for quick access and offline functionality.</p>
                 <div class="install-buttons">
                     <button id="installConfirm">
                         <i class="fas fa-download" style="margin-right: 4px;"></i>Install
                     </button>
-                    <button onclick="hideInstallPopup()" style="background: #6b7280;">
+                    <button onclick="hideInstallPopup()" class="bg-gray-500 hover:bg-gray-600">
                         Cancel
                     </button>
                 </div>
@@ -840,39 +763,21 @@
         <div id="messageContainer"></div>
     </div>
 
+    
     <script>
-        // Global Variables
+        // Global variables
+        let enrolledStudents = JSON.parse(localStorage.getItem('enrolledStudents') || '[]');
+        let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+        let currentSection = 'recognize';
         let isModelsLoaded = false;
-        let videoStream = null;
-        let detectionInterval = null;
-        let lastSmileTime = 0;
-        let smileCount = 0;
-        let isSmiling = false;
-        let userCoins = parseInt(localStorage.getItem('userCoins') || '0');
-        let userStreak = parseInt(localStorage.getItem('userStreak') || '0');
-        let lastLoginDate = localStorage.getItem('lastLoginDate');
-        let todayLogins = JSON.parse(localStorage.getItem('todayLogins') || '{}');
-       
-        let hasCompletedSmileToday = false;
+        let enrollVideoStream = null;
+        let recognizeVideoStream = null;
+        let recognitionInterval = null;
+        let capturedFaceDescriptor = null;
 
-        // Daily Quotes Array
-        const dailyQuotes = [
-            "A smile is the universal welcome. Keep smiling and make the world brighter! 😊",
-            "Smile, it's the key that fits the lock of everybody's heart. 💝",
-            "A smile is happiness you'll find right under your nose. 🌟",
-            "Every smile makes you a day younger and brings joy to others. ✨",
-            "Smiling is contagious - spread the joy wherever you go! 🌈",
-            "Your smile is your logo, your personality is your business card. 💫",
-            "Life is better when you're laughing and smiling! 🎉",
-            "A genuine smile comes from within and lights up the world. 🌞",
-            "Smile at strangers and you just might change a life. 🌸",
-            "The world always looks brighter from behind a smile. 🌅"
-        ];
-
-        // PWA Installation Variables
+        // PWA Installation
         let deferredPrompt;
-
-        // PWA Event Listeners
+        
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -906,15 +811,8 @@
             });
         }
 
-        // Welcome Popup
-        function closeWelcomePopup() {
-            document.getElementById('welcomePopup').classList.add('hidden');
-            loadModels();
-        }
-
         // Initialize Face-api models
         async function loadModels() {
-            document.getElementById('loadingScreen').classList.remove('hidden');
             const loadingProgress = document.getElementById('loadingProgress');
             
             try {
@@ -924,15 +822,14 @@
                 loadingProgress.textContent = 'Loading face landmarks model...';
                 await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
                 
-                loadingProgress.textContent = 'Loading face expression model...';
-                await faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+                loadingProgress.textContent = 'Loading face recognition model...';
+                await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
                 
                 loadingProgress.textContent = 'Models loaded successfully!';
                 isModelsLoaded = true;
                 
                 setTimeout(() => {
                     document.getElementById('loadingScreen').classList.add('hidden');
-                    initializeApp();
                 }, 1000);
                 
             } catch (error) {
@@ -941,403 +838,361 @@
             }
         }
 
-        // Initialize App
-        function initializeApp() {
-            updateDailyQuote();
-            updateUI();
-            updateLoginStatus();
-            checkStreakReset();
-            generateGiftLevels();
-            generateGiftList();
+        // Navigation
+        function showSection(section) {
+            document.getElementById('enrollSection').classList.add('hidden');
+            document.getElementById('recognizeSection').classList.add('hidden');
+            document.getElementById('attendanceSection').classList.add('hidden');
+            
+            document.getElementById(section + 'Section').classList.remove('hidden');
+            currentSection = section;
             toggleInstallButton();
         }
 
-        // Update Daily Quote
-        function updateDailyQuote() {
-            const today = new Date();
-            const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-            const quoteIndex = dayOfYear % dailyQuotes.length;
-            document.getElementById('dailyQuote').textContent = dailyQuotes[quoteIndex];
-        }
+        document.getElementById('enrollBtn').addEventListener('click', () => showSection('enroll'));
+        document.getElementById('recognizeBtn').addEventListener('click', () => showSection('recognize'));
+        document.getElementById('attendanceBtn').addEventListener('click', () => {
+            showSection('attendance');
+            loadAttendanceTable();
+        });
 
-        // Camera Controls
-        document.getElementById('startCamera').addEventListener('click', startCamera);
-        document.getElementById('stopCamera').addEventListener('click', stopCamera);
+        // Enrollment functionality
+        document.getElementById('startEnrollCamera').addEventListener('click', startEnrollCamera);
+        document.getElementById('captureEnroll').addEventListener('click', captureForEnrollment);
+        document.getElementById('enrollForm').addEventListener('submit', saveStudent);
 
-        async function startCamera() {
-            if (!isModelsLoaded) {
-                showMessage('AI models are still loading. Please wait...', 'warning');
-                return;
-            }
-
+        async function startEnrollCamera() {
             try {
-                const video = document.getElementById('smileVideo');
+                const video = document.getElementById('enrollVideo');
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 640 }, 
-                        height: { ideal: 480 },
-                        facingMode: 'user'
-                    } 
+                    video: { width: 640, height: 480 } 
                 });
-                
                 video.srcObject = stream;
-                videoStream = stream;
+                enrollVideoStream = stream;
                 
-                video.addEventListener('loadedmetadata', () => {
-                    const canvas = document.getElementById('smileCanvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                });
+                document.getElementById('startEnrollCamera').disabled = true;
+                document.getElementById('captureEnroll').disabled = false;
                 
-                document.getElementById('startCamera').disabled = true;
-                document.getElementById('stopCamera').disabled = false;
-                
-                // Start smile detection
-                detectionInterval = setInterval(detectSmile, 100);
-                
-                
-                
-                showMessage('Camera started! Show your beautiful smile! 😊', 'success');
-                
+                showMessage('Camera started. Position your face in the frame.', 'success');
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 showMessage('Error accessing camera. Please check permissions.', 'error');
             }
         }
 
-        function stopCamera() {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
+        async function captureForEnrollment() {
+            if (!isModelsLoaded) {
+                showMessage('Models are still loading. Please wait.', 'warning');
+                return;
             }
-            
-            if (detectionInterval) {
-                clearInterval(detectionInterval);
-                detectionInterval = null;
-            }
-            
-            
-            
-            document.getElementById('startCamera').disabled = false;
-            document.getElementById('stopCamera').disabled = true;
-            
-            const canvas = document.getElementById('smileCanvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            document.getElementById('smileStatus').textContent = 'Camera stopped. Ready to detect your smile!';
-            
-            showMessage('Camera stopped.', 'info');
-        }
 
-        // Smile Detection Function
-        async function detectSmile() {
-            const video = document.getElementById('smileVideo');
-            const canvas = document.getElementById('smileCanvas');
+            const video = document.getElementById('enrollVideo');
+            const canvas = document.getElementById('enrollCanvas');
             const ctx = canvas.getContext('2d');
-            const statusDiv = document.getElementById('smileStatus');
-
-            if (!video.videoWidth || !video.videoHeight) return;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
 
             try {
                 const detections = await faceapi
                     .detectAllFaces(video)
                     .withFaceLandmarks()
-                    .withFaceExpressions();
-
-                // Clear canvas
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    .withFaceDescriptors();
 
                 if (detections.length === 0) {
-                    statusDiv.textContent = 'No face detected. Look at the camera!';
-                    statusDiv.style.color = '#f59e0b';
-                    isSmiling = false;
+                    showMessage('No face detected. Please position your face clearly in the frame.', 'warning');
                     return;
                 }
 
                 if (detections.length > 1) {
-                    statusDiv.textContent = 'Multiple faces detected. Only one person please!';
-                    statusDiv.style.color = '#f59e0b';
-                    isSmiling = false;
+                    showMessage('Multiple faces detected. Please ensure only one face is in the frame.', 'warning');
                     return;
                 }
 
+                // Clear canvas and draw face box
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 const detection = detections[0];
                 const { x, y, width, height } = detection.detection.box;
                 
-                // Draw face detection box
                 ctx.strokeStyle = '#10b981';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(x, y, width, height);
                 
-                // Get smile confidence (happy expression)
-                const expressions = detection.expressions;
-                const smileConfidence = expressions.happy;
-                const smileThreshold = 0.8; // 80% confidence threshold for instant detection
+                // Store face descriptor
+                capturedFaceDescriptor = detection.descriptor;
+                
+                document.getElementById('submitEnroll').disabled = false;
+                showMessage('Face captured successfully! Fill in student details and save.', 'success');
+                
+            } catch (error) {
+                console.error('Error capturing face:', error);
+                showMessage('Error processing face. Please try again.', 'error');
+            }
+        }
 
-                // Update status based on smile detection
-                if (smileConfidence > smileThreshold && !hasCompletedSmileToday) {
-                    hasCompletedSmileToday = true;
+        function saveStudent(e) {
+            e.preventDefault();
+            
+            if (!capturedFaceDescriptor) {
+                showMessage('Please capture a face first.', 'warning');
+                return;
+            }
+
+            const name = document.getElementById('studentName').value;
+            const id = document.getElementById('studentId').value;
+            const studentClass = document.getElementById('studentClass').value;
+            const email = document.getElementById('studentEmail').value;
+
+            // Check if student ID already exists
+            if (enrolledStudents.find(s => s.id === id)) {
+                showMessage('Student ID already exists.', 'error');
+                return;
+            }
+
+            const student = {
+                name,
+                id,
+                class: studentClass,
+                email,
+                descriptor: Array.from(capturedFaceDescriptor),
+                enrolledAt: new Date().toISOString()
+            };
+
+            enrolledStudents.push(student);
+            localStorage.setItem('enrolledStudents', JSON.stringify(enrolledStudents));
+
+            // Reset form and camera
+            document.getElementById('enrollForm').reset();
+            document.getElementById('enrollCanvas').getContext('2d').clearRect(0, 0, 640, 480);
+            document.getElementById('submitEnroll').disabled = true;
+            document.getElementById('captureEnroll').disabled = true;
+            document.getElementById('startEnrollCamera').disabled = false;
+            
+            if (enrollVideoStream) {
+                enrollVideoStream.getTracks().forEach(track => track.stop());
+                enrollVideoStream = null;
+            }
+            
+            capturedFaceDescriptor = null;
+            showMessage(`Student ${name} enrolled successfully!`, 'success');
+        }
+
+        // Recognition functionality
+        document.getElementById('startRecognizeCamera').addEventListener('click', startRecognition);
+        document.getElementById('stopRecognizeCamera').addEventListener('click', stopRecognition);
+        document.getElementById('markAttendance').addEventListener('click', markStudentAttendance);
+
+        async function startRecognition() {
+            if (!isModelsLoaded) {
+                showMessage('Models are still loading. Please wait.', 'warning');
+                return;
+            }
+
+            if (enrolledStudents.length === 0) {
+                showMessage('No students enrolled. Please enroll students first.', 'warning');
+                return;
+            }
+
+            try {
+                const video = document.getElementById('recognizeVideo');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                video.srcObject = stream;
+                recognizeVideoStream = stream;
+                
+                document.getElementById('startRecognizeCamera').disabled = true;
+                document.getElementById('stopRecognizeCamera').disabled = false;
+                
+                // Start recognition loop
+                recognitionInterval = setInterval(performRecognition, 1000);
+                showMessage('Recognition started. Position student face in frame.', 'success');
+                
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                showMessage('Error accessing camera. Please check permissions.', 'error');
+            }
+        }
+
+        function stopRecognition() {
+            if (recognizeVideoStream) {
+                recognizeVideoStream.getTracks().forEach(track => track.stop());
+                recognizeVideoStream = null;
+            }
+            
+            if (recognitionInterval) {
+                clearInterval(recognitionInterval);
+                recognitionInterval = null;
+            }
+            
+            document.getElementById('startRecognizeCamera').disabled = false;
+            document.getElementById('stopRecognizeCamera').disabled = true;
+            document.getElementById('recognizedStudent').classList.add('hidden');
+            
+            const canvas = document.getElementById('recognizeCanvas');
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            showMessage('Recognition stopped.', 'info');
+        }
+
+        async function performRecognition() {
+            const video = document.getElementById('recognizeVideo');
+            const canvas = document.getElementById('recognizeCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            try {
+                const detections = await faceapi
+                    .detectAllFaces(video)
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (detections.length === 0) {
+                    document.getElementById('recognizedStudent').classList.add('hidden');
+                    return;
+                }
+
+                // Draw face boxes
+                detections.forEach(detection => {
+                    const { x, y, width, height } = detection.detection.box;
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, width, height);
+                });
+
+                // Recognize faces
+                const labeledDescriptors = enrolledStudents.map(student => 
+                    new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
+                );
+
+                const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+                
+                for (const detection of detections) {
+                    const match = faceMatcher.findBestMatch(detection.descriptor);
                     
-                    // Clear timeout since smile was detected
-                    
-                    
-                    handleSmileDetected();
-                    
-                    statusDiv.innerHTML = `🎉 EXCELLENT! Very good, keep smiling like that! Confidence: ${Math.round(smileConfidence * 100)}%`;
-                    statusDiv.style.color = '#10b981';
-                    
-                    // Draw celebration effect
-                    ctx.fillStyle = '#ffd700';
-                    ctx.font = '20px Arial';
-                    ctx.fillText('🎉 GREAT SMILE! 🎉', x, y - 20);
-                    
-                    // Stop camera after successful detection
-                    setTimeout(() => {
-                        stopCamera();
-                    }, 2000);
-                    
-                } else if (smileConfidence > 0.6) {
-                    statusDiv.innerHTML = `😊 Almost there! Keep smiling! Confidence: ${Math.round(smileConfidence * 100)}% (Need 80%+)`;
-                    statusDiv.style.color = '#3b82f6';
-                } else {
-                    statusDiv.innerHTML = `😐 Smile bigger! Confidence: ${Math.round(smileConfidence * 100)}% (Need 80%+)`;
-                    statusDiv.style.color = '#f59e0b';
+                    if (match.label !== 'unknown') {
+                        const student = enrolledStudents.find(s => s.id === match.label);
+                        if (student) {
+                            displayRecognizedStudent(student, match.distance);
+                        }
+                    } else {
+                        document.getElementById('recognizedStudent').classList.add('hidden');
+                    }
                 }
 
             } catch (error) {
-                console.error('Smile detection error:', error);
-                statusDiv.textContent = 'Error detecting smile. Please try restarting the camera.';
-                statusDiv.style.color = '#ef4444';
+                console.error('Recognition error:', error);
             }
         }
 
-        // Handle Smile Detection
-        function handleSmileDetected() {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const today = now.toDateString();
+        function displayRecognizedStudent(student, distance) {
+            const confidence = Math.round((1 - distance) * 100);
             
-            // Reset today's logins if it's a new day
-            if (lastLoginDate !== today) {
-                todayLogins = {};
-                lastLoginDate = today;
-                localStorage.setItem('lastLoginDate', today);
-                hasCompletedSmileToday = false;
-            }
-
-            let loginType = '';
-            let canLogin = false;
-
-            // Check if it's morning login time (5 AM to 8 AM)
-            if (currentHour >= 5 && currentHour < 8 && !todayLogins.morning) {
-                loginType = 'morning';
-                canLogin = true;
-                todayLogins.morning = true;
-                document.getElementById('morningLogin').classList.add('completed');
-                document.getElementById('morningStatus').textContent = '✓ Completed';
-                
-            // Check if it's evening login time (8 PM to 11 PM)
-            } else if (currentHour >= 20 && currentHour < 23 && !todayLogins.evening) {
-                loginType = 'evening';
-                canLogin = true;
-                todayLogins.evening = true;
-                document.getElementById('eveningLogin').classList.add('completed');
-                document.getElementById('eveningStatus').textContent = '✓ Completed';
-            }
-
-            if (canLogin) {
-                // Award 1 coin (as requested)
-                userCoins += 1;
-                
-                // Update streak if both logins completed today
-                if (todayLogins.morning && todayLogins.evening) {
-                    userStreak += 1;
-                    showMessage(`🎉 Daily challenge complete! +1 coin. Streak: ${userStreak} days`, 'success');
-                } else {
-                    showMessage(`😊 ${loginType === 'morning' ? 'Morning' : 'Evening'} smile logged! +1 coin`, 'success');
-                }
-                
-                // Save data
-                localStorage.setItem('userCoins', userCoins.toString());
-                localStorage.setItem('userStreak', userStreak.toString());
-                localStorage.setItem('todayLogins', JSON.stringify(todayLogins));
-                
-                // Update UI
-                updateUI();
-                checkGiftEligibility();
-                
-            } else {
-                if (currentHour >= 8 && currentHour < 20) {
-                    showMessage('Evening login is available from 8 PM to 11 PM!', 'warning');
-                } else if (currentHour >= 23 || currentHour < 5) {
-                    showMessage('Come back during login hours: 5-8 AM or 8-11 PM!', 'warning');
-                } else if (todayLogins[loginType]) {
-                    showMessage(`You've already completed your ${loginType} login today!`, 'warning');
-                }
-            }
-        }
-
-        // Update UI
-        function updateUI() {
-            document.getElementById('coinCount').textContent = userCoins;
-            document.getElementById('streakCount').textContent = userStreak;
+            document.getElementById('recognizedName').textContent = student.name;
+            document.getElementById('recognizedId').textContent = `ID: ${student.id}`;
+            document.getElementById('recognizedClass').textContent = `Class: ${student.class}`;
+            document.getElementById('recognizedConfidence').textContent = `Confidence: ${confidence}%`;
             
-            const coinsNeeded = 10; // 10 days for each gift
-            const progress = (userStreak % coinsNeeded) / coinsNeeded * 100;
-            document.getElementById('progressFill').style.width = `${progress}%`;
-            document.getElementById('progressText').textContent = `${userStreak % coinsNeeded} / ${coinsNeeded} days for next gift`;
-            
-            const daysToNextGift = Math.max(0, coinsNeeded - (userStreak % coinsNeeded));
-            document.getElementById('daysToGift').textContent = daysToNextGift;
+            document.getElementById('recognizedStudent').classList.remove('hidden');
+            document.getElementById('recognizedStudent').dataset.studentId = student.id;
         }
 
-        // Update Login Status
-        function updateLoginStatus() {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const today = now.toDateString();
+        function markStudentAttendance() {
+            const studentId = document.getElementById('recognizedStudent').dataset.studentId;
+            const student = enrolledStudents.find(s => s.id === studentId);
             
-            // Reset if new day
-            if (lastLoginDate !== today) {
-                todayLogins = {};
-                hasCompletedSmileToday = false;
+            if (!student) return;
+
+            const today = new Date().toDateString();
+            const existingRecord = attendanceRecords.find(
+                r => r.studentId === studentId && new Date(r.date).toDateString() === today
+            );
+
+            if (existingRecord) {
+                showMessage(`${student.name} already marked present today.`, 'warning');
+                return;
             }
 
-            // Update morning login status
-            const morningCard = document.getElementById('morningLogin');
-            const morningStatus = document.getElementById('morningStatus');
-            
-            if (todayLogins.morning) {
-                morningCard.classList.add('completed');
-                morningStatus.textContent = '✓ Completed';
-            } else if (currentHour >= 8) {
-                morningStatus.textContent = 'Missed (5-8 AM)';
-                morningStatus.style.color = '#ef4444';
-            } else if (currentHour >= 5) {
-                morningStatus.textContent = 'Available now!';
-                morningStatus.style.color = '#10b981';
-            } else {
-                morningStatus.textContent = '5 AM - 8 AM';
-            }
+            const attendanceRecord = {
+                studentId: student.id,
+                name: student.name,
+                class: student.class,
+                date: new Date().toISOString(),
+                status: 'Present',
+                markedAt: new Date().toLocaleTimeString()
+            };
 
-            // Update evening login status
-            const eveningCard = document.getElementById('eveningLogin');
-            const eveningStatus = document.getElementById('eveningStatus');
-            
-            if (todayLogins.evening) {
-                eveningCard.classList.add('completed');
-                eveningStatus.textContent = '✓ Completed';
-            } else if (currentHour >= 23) {
-                eveningStatus.textContent = 'Missed (8-11 PM)';
-                eveningStatus.style.color = '#ef4444';
-            } else if (currentHour >= 20) {
-                eveningStatus.textContent = 'Available now!';
-                eveningStatus.style.color = '#10b981';
-            } else {
-                eveningStatus.textContent = '8 PM - 11 PM';
-            }
+            attendanceRecords.push(attendanceRecord);
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            loadAttendanceTable();
+            showMessage(`${student.name} marked present successfully!`, 'success');
         }
 
-        // Generate Gift Levels (20 gifts)
-        function generateGiftLevels() {
-            const giftLevelsContainer = document.getElementById('giftLevels');
-            giftLevelsContainer.innerHTML = '';
-            
-            for (let i = 1; i <= 20; i++) {
-                const giftLevel = document.createElement('div');
-                const requiredDays = i * 10;
-                const isUnlocked = userStreak >= requiredDays;
-                
-                giftLevel.className = `gift-level ${isUnlocked ? 'unlocked' : 'locked'}`;
-                giftLevel.innerHTML = `
-                    <i class="fas fa-gift"></i>
-                    <span>Gift ${i}</span>
-                `;
-                
-                if (isUnlocked) {
-                    giftLevel.onclick = () => openGift(`gift${i}.html`);
-                }
-                
-                giftLevelsContainer.appendChild(giftLevel);
+        // Export attendance to CSV
+        document.getElementById('exportAttendance').addEventListener('click', exportToCSV);
+        document.getElementById('clearAttendance').addEventListener('click', clearAllData);
+        document.getElementById('attendanceDate').addEventListener('change', loadAttendanceTable);
+
+        function exportToCSV() {
+            if (attendanceRecords.length === 0) {
+                showMessage('No attendance records to export.', 'warning');
+                return;
             }
+
+            const headers = ['Name', 'Student ID', 'Class', 'Date', 'Time', 'Status'];
+            const csvContent = [
+                headers.join(','),
+                ...attendanceRecords.map(record => [
+                    record.name,
+                    record.studentId,
+                    record.class,
+                    new Date(record.date).toDateString(),
+                    record.markedAt,
+                    record.status
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showMessage('Attendance exported successfully!', 'success');
         }
 
-        // Generate Gift List for Popup
-        function generateGiftList() {
-            const giftList = document.getElementById('giftList');
-            giftList.innerHTML = '';
-            
-            for (let i = 1; i <= 20; i++) {
-                const giftItem = document.createElement('div');
-                giftItem.className = 'gift-item';
-                giftItem.innerHTML = `
-                    <img src="gift${i}-image.jpg" alt="Gift ${i}" onerror="this.style.display='none'">
-                    <h4>Tech Gift ${i}</h4>
-                    <p>${i * 10} days streak</p>
-                `;
-                giftList.appendChild(giftItem);
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                localStorage.removeItem('enrolledStudents');
+                localStorage.removeItem('attendanceRecords');
+                enrolledStudents = [];
+                attendanceRecords = [];
+                loadAttendanceTable();
+                showMessage('All data cleared.', 'info');
             }
         }
 
-        // Gift Journey Functions
-        function toggleGiftJourney() {
-            const journey = document.getElementById('giftJourney');
-            const icon = document.getElementById('giftToggleIcon');
-            
-            if (journey.classList.contains('open')) {
-                journey.classList.remove('open');
-                icon.className = 'fas fa-chevron-down';
-            } else {
-                journey.classList.add('open');
-                icon.className = 'fas fa-chevron-up';
-            }
-        }
-
-        function showGiftList() {
-            document.getElementById('giftListPopup').classList.remove('hidden');
-        }
-
-        function closeGiftList() {
-            document.getElementById('giftListPopup').classList.add('hidden');
-        }
-
-        // Check Gift Eligibility
-        function checkGiftEligibility() {
-            generateGiftLevels(); // Refresh gift levels
-            
-            // Check if any new gift is unlocked
-            const newGiftNumber = Math.floor(userStreak / 10);
-            if (newGiftNumber > 0) {
-                showMessage(`🎁 Gift ${newGiftNumber} is now available! You can break your streak to start fresh for the next gift.`, 'success');
-            }
-        }
-
-        // Check Streak Reset
-        function checkStreakReset() {
-            const now = new Date();
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            
-            if (lastLoginDate && lastLoginDate !== now.toDateString() && lastLoginDate !== yesterday.toDateString()) {
-                // Streak broken - reset
-                userStreak = 0;
-                localStorage.setItem('userStreak', '0');
-                showMessage('Streak reset! Remember to login daily to maintain your streak.', 'warning');
-            }
-        }
-
-        // Gift Functions
-        function openGift(giftPage) {
-            window.location.href = giftPage;
-        }
-
-        // Message System
+        // Utility functions
         function showMessage(message, type = 'info') {
             const container = document.getElementById('messageContainer');
             const messageEl = document.createElement('div');
             
-            messageEl.className = `message ${type}`;
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            messageEl.className = `${colors[type]} text-white px-4 py-2 rounded-lg mb-2 slide-in`;
             messageEl.textContent = message;
             
             container.appendChild(messageEl);
@@ -1347,14 +1202,16 @@
             }, 5000);
         }
 
-        // PWA Functions
+        // PWA Functions (from provided reference)
         function showInstallPopup() {
             markInstallAttempted();
             document.getElementById('install-popup-overlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         }
 
         function hideInstallPopup() {
             document.getElementById('install-popup-overlay').classList.add('hidden');
+            document.body.style.overflow = 'auto';
         }
 
         function isAppInstalled() {
@@ -1370,6 +1227,45 @@
                 return true;
             }
             
+            if (document.referrer.includes('android-app://')) {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: minimal-ui)').matches) {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: fullscreen)').matches) {
+                return true;
+            }
+            
+            if (window.navigator.userAgent.includes('wv')) {
+                return true;
+            }
+            
+            if (window.location.search.includes('utm_source=homescreen') || 
+                window.location.search.includes('source=pwa')) {
+                return true;
+            }
+            
+            if ('getInstalledRelatedApps' in window.navigator) {
+                window.navigator.getInstalledRelatedApps().then(relatedApps => {
+                    if (relatedApps.length > 0) {
+                        document.getElementById('install-button-container').classList.add('hidden');
+                    }
+                }).catch(() => {
+                    // Ignore errors
+                });
+            }
+            
+            if (window.chrome && window.chrome.app && window.chrome.app.isInstalled) {
+                return true;
+            }
+            
+            if (window.matchMedia('(display-mode: browser)').matches === false) {
+                return true;
+            }
+            
             return false;
         }
 
@@ -1381,6 +1277,15 @@
             }
         }
 
+        function resetInstallState() {
+            try {
+                localStorage.removeItem('pwa-install-attempted');
+                toggleInstallButton();
+            } catch (e) {
+                console.log('Could not reset install state');
+            }
+        }
+
         function toggleInstallButton() {
             const installContainer = document.getElementById('install-button-container');
             
@@ -1389,31 +1294,97 @@
                 return;
             }
             
-            installContainer.classList.remove('hidden');
+            if (currentSection === 'recognize') {
+                installContainer.classList.remove('hidden');
+            } else {
+                installContainer.classList.add('hidden');
+            }
         }
 
-        // Event Listeners
+        // Event listeners
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 hideInstallPopup();
-                closeGiftList();
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleInstallButton();
+            
+            window.matchMedia('(display-mode: standalone)').addEventListener('change', function(e) {
+                toggleInstallButton();
+            });
+        });
+        function loadAttendanceTable() {
+    const tbody = document.getElementById('attendanceTableBody');
+    const selectedDate = document.getElementById('attendanceDate').value;
+    
+    tbody.innerHTML = '';
+    
+    let recordsToShow = attendanceRecords;
+    if (selectedDate) {
+        recordsToShow = attendanceRecords.filter(record => 
+            new Date(record.date).toDateString() === new Date(selectedDate).toDateString()
+        );
+    }
+    
+    recordsToShow.forEach((record, index) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-600';
+        
+        row.innerHTML = `
+            <td class="px-4 py-2">
+                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white"></i>
+                </div>
+            </td>
+            <td class="px-4 py-2">${record.name}</td>
+            <td class="px-4 py-2">${record.studentId}</td>
+            <td class="px-4 py-2">${record.class}</td>
+            <td class="px-4 py-2">
+                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm">${record.status}</span>
+            </td>
+            <td class="px-4 py-2">${new Date(record.date).toLocaleDateString()} ${record.markedAt}</td>
+            <td class="px-4 py-2">
+                <button onclick="deleteAttendanceRecord(${index})" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function deleteAttendanceRecord(index) {
+    if (confirm('Are you sure you want to delete this record?')) {
+        attendanceRecords.splice(index, 1);
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        loadAttendanceTable();
+        showMessage('Attendance record deleted.', 'success');
+    }
+}
+
+        // Initialize app
+        window.addEventListener('load', () => {
+            loadModels();
+            showSection('recognize');
+            
+            // Set today's date as default
+            document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
         });
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
+            if (enrollVideoStream) {
+                enrollVideoStream.getTracks().forEach(track => track.stop());
             }
-            if (detectionInterval) {
-                clearInterval(detectionInterval);
+            if (recognizeVideoStream) {
+                recognizeVideoStream.getTracks().forEach(track => track.stop());
             }
-            
-        });
-
-        // Initialize app when page loads
-        window.addEventListener('load', () => {
-            // App will initialize after welcome popup is closed
+            if (recognitionInterval) {
+                clearInterval(recognitionInterval);
+            }
         });
     </script>
 </body>
