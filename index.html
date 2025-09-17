@@ -574,6 +574,14 @@
                 flex: 1;
             }
         }
+        video, canvas {
+    transform: translateZ(0); /* Hardware acceleration */
+    backface-visibility: hidden;
+}
+
+.loading-spinner {
+    will-change: transform;
+}
     </style>
 </head>
 <body>
@@ -583,7 +591,7 @@
             <div class="nav-container">
                 <div class="nav-brand">
                     <i class="fas fa-user-check"></i>
-                    <h1>FaceAttend</h1>
+                    <h1>FaceAttend - By Yahya</h1>
                 </div>
                 
                 <div class="nav-buttons">
@@ -762,7 +770,10 @@
         <!-- Success/Error Messages -->
         <div id="messageContainer"></div>
     </div>
-
+<script>
+// Preload and optimize
+performance.mark('app-start');
+</script>
     
     <script>
         // Global variables
@@ -774,6 +785,18 @@
         let recognizeVideoStream = null;
         let recognitionInterval = null;
         let capturedFaceDescriptor = null;
+        let lastDetectionTime = 0;
+let detectionThrottleMs = 500; // Reduce detection frequency
+let canvasCache = new Map(); // Cache canvas operations
+let faceMatcherCache = null; // Cache face matcher
+let isProcessing = false; // Prevent overlapping processing
+let videoConstraints = {
+    video: { 
+        width: { ideal: 320 }, // Reduce video resolution for better performance
+        height: { ideal: 240 },
+        frameRate: { ideal: 15, max: 20 } // Limit frame rate
+    }
+};
 
         // PWA Installation
         let deferredPrompt;
@@ -813,30 +836,31 @@
 
         // Initialize Face-api models
         async function loadModels() {
-            const loadingProgress = document.getElementById('loadingProgress');
-            
-            try {
-                loadingProgress.textContent = 'Loading face detection model...';
-                await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-                
-                loadingProgress.textContent = 'Loading face landmarks model...';
-                await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-                
-                loadingProgress.textContent = 'Loading face recognition model...';
-                await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-                
-                loadingProgress.textContent = 'Models loaded successfully!';
-                isModelsLoaded = true;
-                
-                setTimeout(() => {
-                    document.getElementById('loadingScreen').classList.add('hidden');
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Error loading models:', error);
-                loadingProgress.textContent = 'Error loading models. Please refresh.';
-            }
-        }
+    const loadingProgress = document.getElementById('loadingProgress');
+    
+    try {
+        // Use smaller, faster models for better performance
+        loadingProgress.textContent = 'Loading optimized face detection model...';
+        await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+        
+        loadingProgress.textContent = 'Loading face landmarks model...';
+        await faceapi.nets.faceLandmark68TinyNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+        
+        loadingProgress.textContent = 'Loading face recognition model...';
+        await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+        
+        loadingProgress.textContent = 'Models loaded successfully!';
+        isModelsLoaded = true;
+        
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.add('hidden');
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error loading models:', error);
+        loadingProgress.textContent = 'Error loading models. Please refresh.';
+    }
+}
 
         // Navigation
         function showSection(section) {
@@ -862,158 +886,253 @@
         document.getElementById('enrollForm').addEventListener('submit', saveStudent);
 
         async function startEnrollCamera() {
-            try {
-                const video = document.getElementById('enrollVideo');
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 640, height: 480 } 
-                });
-                video.srcObject = stream;
-                enrollVideoStream = stream;
-                
-                document.getElementById('startEnrollCamera').disabled = true;
-                document.getElementById('captureEnroll').disabled = false;
-                
-                showMessage('Camera started. Position your face in the frame.', 'success');
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                showMessage('Error accessing camera. Please check permissions.', 'error');
-            }
-        }
+    try {
+        const video = document.getElementById('enrollVideo');
+        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+        video.srcObject = stream;
+        enrollVideoStream = stream;
+        
+        document.getElementById('startEnrollCamera').disabled = true;
+        document.getElementById('captureEnroll').disabled = false;
+        
+        showMessage('Camera started. Position your face in the frame.', 'success');
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+        showMessage('Error accessing camera. Please check permissions.', 'error');
+    }
+}
+
 
         async function captureForEnrollment() {
-            if (!isModelsLoaded) {
-                showMessage('Models are still loading. Please wait.', 'warning');
-                return;
-            }
+    if (!isModelsLoaded) {
+        showMessage('Models are still loading. Please wait.', 'warning');
+        return;
+    }
 
-            const video = document.getElementById('enrollVideo');
-            const canvas = document.getElementById('enrollCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+    if (isProcessing) {
+        return; // Prevent multiple simultaneous processing
+    }
 
-            try {
-                const detections = await faceapi
-                    .detectAllFaces(video)
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
+    isProcessing = true;
+    const video = document.getElementById('enrollVideo');
+    const canvas = document.getElementById('enrollCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-                if (detections.length === 0) {
-                    showMessage('No face detected. Please position your face clearly in the frame.', 'warning');
-                    return;
-                }
+    try {
+        // Use faster tiny detector
+        const detections = await faceapi
+            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ 
+                inputSize: 224, // Smaller input size for speed
+                scoreThreshold: 0.5 
+            }))
+            .withFaceLandmarks(true) // Use tiny landmarks
+            .withFaceDescriptors();
 
-                if (detections.length > 1) {
-                    showMessage('Multiple faces detected. Please ensure only one face is in the frame.', 'warning');
-                    return;
-                }
-
-                // Clear canvas and draw face box
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const detection = detections[0];
-                const { x, y, width, height } = detection.detection.box;
-                
-                ctx.strokeStyle = '#10b981';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(x, y, width, height);
-                
-                // Store face descriptor
-                capturedFaceDescriptor = detection.descriptor;
-                
-                document.getElementById('submitEnroll').disabled = false;
-                showMessage('Face captured successfully! Fill in student details and save.', 'success');
-                
-            } catch (error) {
-                console.error('Error capturing face:', error);
-                showMessage('Error processing face. Please try again.', 'error');
-            }
+        if (detections.length === 0) {
+            showMessage('No face detected. Please position your face clearly in the frame.', 'warning');
+            isProcessing = false;
+            return;
         }
 
-        function saveStudent(e) {
-            e.preventDefault();
-            
-            if (!capturedFaceDescriptor) {
-                showMessage('Please capture a face first.', 'warning');
-                return;
-            }
-
-            const name = document.getElementById('studentName').value;
-            const id = document.getElementById('studentId').value;
-            const studentClass = document.getElementById('studentClass').value;
-            const email = document.getElementById('studentEmail').value;
-
-            // Check if student ID already exists
-            if (enrolledStudents.find(s => s.id === id)) {
-                showMessage('Student ID already exists.', 'error');
-                return;
-            }
-
-            const student = {
-                name,
-                id,
-                class: studentClass,
-                email,
-                descriptor: Array.from(capturedFaceDescriptor),
-                enrolledAt: new Date().toISOString()
-            };
-
-            enrolledStudents.push(student);
-            localStorage.setItem('enrolledStudents', JSON.stringify(enrolledStudents));
-
-            // Reset form and camera
-            document.getElementById('enrollForm').reset();
-            document.getElementById('enrollCanvas').getContext('2d').clearRect(0, 0, 640, 480);
-            document.getElementById('submitEnroll').disabled = true;
-            document.getElementById('captureEnroll').disabled = true;
-            document.getElementById('startEnrollCamera').disabled = false;
-            
-            if (enrollVideoStream) {
-                enrollVideoStream.getTracks().forEach(track => track.stop());
-                enrollVideoStream = null;
-            }
-            
-            capturedFaceDescriptor = null;
-            showMessage(`Student ${name} enrolled successfully!`, 'success');
+        if (detections.length > 1) {
+            showMessage('Multiple faces detected. Please ensure only one face is in the frame.', 'warning');
+            isProcessing = false;
+            return;
         }
 
+        // Optimized canvas drawing
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const detection = detections[0];
+        const { x, y, width, height } = detection.detection.box;
+        
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x, y, width, height);
+        
+        // Store face descriptor
+        capturedFaceDescriptor = detection.descriptor;
+        
+        document.getElementById('submitEnroll').disabled = false;
+        showMessage('Face captured successfully! Fill in student details and save.', 'success');
+        
+    } catch (error) {
+        console.error('Error capturing face:', error);
+        showMessage('Error processing face. Please try again.', 'error');
+    } finally {
+        isProcessing = false;
+    }
+}
+        async function performOptimizedRecognition() {
+    if (isProcessing) return; // Skip if still processing previous frame
+    
+    const currentTime = Date.now();
+    if (currentTime - lastDetectionTime < detectionThrottleMs) {
+        return; // Throttle detection calls
+    }
+    
+    isProcessing = true;
+    lastDetectionTime = currentTime;
+    
+    const video = document.getElementById('recognizeVideo');
+    const canvas = document.getElementById('recognizeCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Only resize canvas if dimensions changed
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+    }
+
+    try {
+        // Use faster tiny detector with optimized settings
+        const detections = await faceapi
+            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ 
+                inputSize: 224,
+                scoreThreshold: 0.5
+            }))
+            .withFaceLandmarks(true)
+            .withFaceDescriptors();
+
+        // Clear canvas once
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (detections.length === 0) {
+            document.getElementById('recognizedStudent').classList.add('hidden');
+            isProcessing = false;
+            return;
+        }
+
+        // Optimized face box drawing
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        
+        detections.forEach(detection => {
+            const { x, y, width, height } = detection.detection.box;
+            ctx.strokeRect(x, y, width, height);
+        });
+
+        // Use cached face matcher
+        if (!faceMatcherCache) {
+            createFaceMatcher();
+        }
+        
+        // Process only the best detection to save computation
+        const bestDetection = detections.reduce((prev, current) => 
+            prev.detection.score > current.detection.score ? prev : current
+        );
+        
+        const match = faceMatcherCache.findBestMatch(bestDetection.descriptor);
+        
+        if (match.label !== 'unknown') {
+            const student = enrolledStudents.find(s => s.id === match.label);
+            if (student) {
+                displayRecognizedStudent(student, match.distance);
+            }
+        } else {
+            document.getElementById('recognizedStudent').classList.add('hidden');
+        }
+
+    } catch (error) {
+        console.error('Recognition error:', error);
+    } finally {
+        isProcessing = false;
+    }
+}
         // Recognition functionality
         document.getElementById('startRecognizeCamera').addEventListener('click', startRecognition);
         document.getElementById('stopRecognizeCamera').addEventListener('click', stopRecognition);
         document.getElementById('markAttendance').addEventListener('click', markStudentAttendance);
 
         async function startRecognition() {
-            if (!isModelsLoaded) {
-                showMessage('Models are still loading. Please wait.', 'warning');
-                return;
-            }
+    if (!isModelsLoaded) {
+        showMessage('Models are still loading. Please wait.', 'warning');
+        return;
+    }
 
-            if (enrolledStudents.length === 0) {
-                showMessage('No students enrolled. Please enroll students first.', 'warning');
-                return;
-            }
+    if (enrolledStudents.length === 0) {
+        showMessage('No students enrolled. Please enroll students first.', 'warning');
+        return;
+    }
 
-            try {
-                const video = document.getElementById('recognizeVideo');
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 640, height: 480 } 
-                });
-                video.srcObject = stream;
-                recognizeVideoStream = stream;
-                
-                document.getElementById('startRecognizeCamera').disabled = true;
-                document.getElementById('stopRecognizeCamera').disabled = false;
-                
-                // Start recognition loop
-                recognitionInterval = setInterval(performRecognition, 1000);
-                showMessage('Recognition started. Position student face in frame.', 'success');
-                
-            } catch (error) {
-                console.error('Error starting recognition:', error);
-                showMessage('Error accessing camera. Please check permissions.', 'error');
-            }
+    try {
+        const video = document.getElementById('recognizeVideo');
+        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+        video.srcObject = stream;
+        recognizeVideoStream = stream;
+        
+        document.getElementById('startRecognizeCamera').disabled = true;
+        document.getElementById('stopRecognizeCamera').disabled = false;
+        
+        // Create face matcher once and cache it
+        if (!faceMatcherCache) {
+            createFaceMatcher();
         }
+        
+        // Start optimized recognition loop with throttling
+        recognitionInterval = setInterval(performOptimizedRecognition, detectionThrottleMs);
+        showMessage('Recognition started. Position student face in frame.', 'success');
+        
+    } catch (error) {
+        console.error('Error starting recognition:', error);
+        showMessage('Error accessing camera. Please check permissions.', 'error');
+    }
+}
 
+
+function resetEnrollmentForm() {
+    document.getElementById('enrollForm').reset();
+    document.getElementById('enrollCanvas').getContext('2d').clearRect(0, 0, 640, 480);
+    document.getElementById('submitEnroll').disabled = true;
+    document.getElementById('captureEnroll').disabled = true;
+    document.getElementById('startEnrollCamera').disabled = false;
+    
+    if (enrollVideoStream) {
+        enrollVideoStream.getTracks().forEach(track => track.stop());
+        enrollVideoStream = null;
+    }
+    
+    capturedFaceDescriptor = null;
+}
+
+function optimizeMemoryUsage() {
+    // Clear canvas caches periodically
+    if (canvasCache.size > 10) {
+        canvasCache.clear();
+    }
+    
+    // Garbage collect descriptors if needed
+    if (performance.memory && performance.memory.usedJSHeapSize > 50000000) { // 50MB
+        console.log('Memory usage high, clearing caches');
+        canvasCache.clear();
+        faceMatcherCache = null;
+    }
+}
+
+// 11. ADD ENHANCED ERROR HANDLING AND RECOVERY
+function handleCameraError(error, context) {
+    console.error(`Camera error in ${context}:`, error);
+    
+    if (error.name === 'NotAllowedError') {
+        showMessage('Camera permission denied. Please allow camera access.', 'error');
+    } else if (error.name === 'NotFoundError') {
+        showMessage('No camera found. Please connect a camera.', 'error');
+    } else if (error.name === 'NotReadableError') {
+        showMessage('Camera is being used by another application.', 'error');
+    } else {
+        showMessage('Camera error. Please try again.', 'error');
+    }
+}
+
+// 12. ADD PERFORMANCE MONITORING (optional)
+function logPerformance(operation, startTime) {
+    const duration = performance.now() - startTime;
+    if (duration > 1000) { // Log operations taking more than 1 second
+        console.warn(`Slow operation detected: ${operation} took ${duration.toFixed(2)}ms`);
+    }
+}
         function stopRecognition() {
             if (recognizeVideoStream) {
                 recognizeVideoStream.getTracks().forEach(track => track.stop());
@@ -1035,60 +1154,91 @@
             showMessage('Recognition stopped.', 'info');
         }
 
-        async function performRecognition() {
-            const video = document.getElementById('recognizeVideo');
-            const canvas = document.getElementById('recognizeCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
 
-            try {
-                const detections = await faceapi
-                    .detectAllFaces(video)
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
+        function createFaceMatcher() {
+    const labeledDescriptors = enrolledStudents.map(student => 
+        new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
+    );
+    faceMatcherCache = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+}
 
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                if (detections.length === 0) {
-                    document.getElementById('recognizedStudent').classList.add('hidden');
-                    return;
-                }
+        async function performOptimizedRecognition() {
+    if (isProcessing) return; // Skip if still processing previous frame
+    
+    const currentTime = Date.now();
+    if (currentTime - lastDetectionTime < detectionThrottleMs) {
+        return; // Throttle detection calls
+    }
+    
+    isProcessing = true;
+    lastDetectionTime = currentTime;
+    
+    const video = document.getElementById('recognizeVideo');
+    const canvas = document.getElementById('recognizeCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Only resize canvas if dimensions changed
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+    }
 
-                // Draw face boxes
-                detections.forEach(detection => {
-                    const { x, y, width, height } = detection.detection.box;
-                    ctx.strokeStyle = '#10b981';
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x, y, width, height);
-                });
+    try {
+        // Use faster tiny detector with optimized settings
+        const detections = await faceapi
+            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ 
+                inputSize: 224,
+                scoreThreshold: 0.5
+            }))
+            .withFaceLandmarks(true)
+            .withFaceDescriptors();
 
-                // Recognize faces
-                const labeledDescriptors = enrolledStudents.map(student => 
-                    new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
-                );
+        // Clear canvas once
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-                
-                for (const detection of detections) {
-                    const match = faceMatcher.findBestMatch(detection.descriptor);
-                    
-                    if (match.label !== 'unknown') {
-                        const student = enrolledStudents.find(s => s.id === match.label);
-                        if (student) {
-                            displayRecognizedStudent(student, match.distance);
-                        }
-                    } else {
-                        document.getElementById('recognizedStudent').classList.add('hidden');
-                    }
-                }
-
-            } catch (error) {
-                console.error('Recognition error:', error);
-            }
+        if (detections.length === 0) {
+            document.getElementById('recognizedStudent').classList.add('hidden');
+            isProcessing = false;
+            return;
         }
 
+        // Optimized face box drawing
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        
+        detections.forEach(detection => {
+            const { x, y, width, height } = detection.detection.box;
+            ctx.strokeRect(x, y, width, height);
+        });
+
+        // Use cached face matcher
+        if (!faceMatcherCache) {
+            createFaceMatcher();
+        }
+        
+        // Process only the best detection to save computation
+        const bestDetection = detections.reduce((prev, current) => 
+            prev.detection.score > current.detection.score ? prev : current
+        );
+        
+        const match = faceMatcherCache.findBestMatch(bestDetection.descriptor);
+        
+        if (match.label !== 'unknown') {
+            const student = enrolledStudents.find(s => s.id === match.label);
+            if (student) {
+                displayRecognizedStudent(student, match.distance);
+            }
+        } else {
+            document.getElementById('recognizedStudent').classList.add('hidden');
+        }
+
+    } catch (error) {
+        console.error('Recognition error:', error);
+    } finally {
+        isProcessing = false;
+    }
+}
         function displayRecognizedStudent(student, distance) {
             const confidence = Math.round((1 - distance) * 100);
             
@@ -1372,6 +1522,7 @@ function deleteAttendanceRecord(index) {
             
             // Set today's date as default
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+            setInterval(optimizeMemoryUsage, 30000); // Clean up every 30 seconds
         });
 
         // Cleanup on page unload
