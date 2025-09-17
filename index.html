@@ -1161,7 +1161,42 @@ function logPerformance(operation, startTime) {
     );
     faceMatcherCache = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
 }
+// Enhanced SW registration with instant updates
+if ('serviceWorker' in navigator) {
+    let refreshing = false;
+    
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+    
+    window.addEventListener('load', async () => {
+        const registration = await navigator.serviceWorker.register('sw.js');
+        registration.update(); // Check for updates immediately
+        
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    showUpdateBanner();
+                }
+            });
+        });
+    });
+}
 
+function showUpdateBanner() {
+    const banner = document.createElement('div');
+    banner.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; right: 0; background: #4CAF50; color: white; padding: 10px; text-align: center; z-index: 10000;">
+            New version available! 
+            <button onclick="window.location.reload()" style="background: white; color: #4CAF50; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+                Update Now
+            </button>
+        </div>`;
+    document.body.insertBefore(banner, document.body.firstChild);
+}
 
         async function performOptimizedRecognition() {
     if (isProcessing) return; // Skip if still processing previous frame
@@ -1522,7 +1557,7 @@ function deleteAttendanceRecord(index) {
             
             // Set today's date as default
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
-            setInterval(optimizeMemoryUsage, 30000); // Clean up every 30 seconds
+            // setInterval(optimizeMemoryUsage, 30000); // Clean up every 30 seconds
         });
 
         // Cleanup on page unload
