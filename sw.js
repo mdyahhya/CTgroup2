@@ -1,12 +1,13 @@
 // =============================================================================
-// INSTANT UPDATE SERVICE WORKER WITH USER DATA PRESERVATION
+// FIXED SERVICE WORKER - WORKING ON LIVE SITES
 // =============================================================================
 
-const CACHE_NAME = 'faceattend-v3.0.0'; // Increment this for each update
+const CACHE_NAME = 'faceattend-v3.0.1'; // Increment this for each update
 const DATA_CACHE_NAME = 'faceattend-data-v1.0.0'; // User data cache (never cleared)
 
-// Only cache essential offline resources and AI models (NO CODE FILES)
+// Cache essential resources including the main page
 const urlsToCache = [
+  '/',
   '/manifest.json',
   '/facecam.jpeg',
   // AI Models - cache for offline functionality
@@ -19,28 +20,21 @@ const urlsToCache = [
   'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_recognition_model-shard2'
 ];
 
-// NEVER cache these files - always fetch fresh for instant updates
-const NEVER_CACHE = [
-  '/',
-  '/index.html',
-  'https://cdn.tailwindcss.com',
-  'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome'
-];
-
-// Install event - cache only essential resources
+// Install event - cache essential resources
 self.addEventListener('install', (event) => {
-  console.log('FaceAttend SW: Installing with instant update capability');
+  console.log('FaceAttend SW: Installing');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('FaceAttend SW: Caching essential resources only');
-        return cache.addAll(urlsToCache.map(url => new Request(url, {
-          mode: 'cors',
-          credentials: 'omit',
-          cache: 'reload' // Force fresh fetch during install
-        })));
+        console.log('FaceAttend SW: Caching resources');
+        return cache.addAll(urlsToCache.map(url => {
+          // Don't add cache busting to models during install
+          return new Request(url, {
+            mode: url.startsWith('http') ? 'cors' : 'same-origin',
+            credentials: 'omit'
+          });
+        }));
       })
       .catch((error) => {
         console.error('FaceAttend SW: Cache failed', error);
@@ -48,17 +42,15 @@ self.addEventListener('install', (event) => {
       })
   );
   
-  // CRITICAL: Skip waiting for instant updates
   self.skipWaiting();
 });
 
-// Activate event - immediate takeover with data preservation
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('FaceAttend SW: Activating with immediate control');
+  console.log('FaceAttend SW: Activating');
   
   event.waitUntil(
     Promise.all([
-      // Delete old caches except user data
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
@@ -69,116 +61,48 @@ self.addEventListener('activate', (event) => {
           })
         );
       }),
-      
-      // Take control immediately
       self.clients.claim()
     ])
   );
-  
-  // Notify all clients that update is available
-  notifyClientsOfUpdate();
 });
 
-// Fetch event - Network first for code, cache for models
+// Fetch event - simplified and working approach
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.startsWith('chrome-extension://')) return;
 
   const url = event.request.url;
   
-  // NEVER cache HTML/JS/CSS - always fetch fresh
-  if (NEVER_CACHE.some(pattern => url.includes(pattern)) ||
-      url.includes('.html') || 
-      url.includes('.js') || 
-      url.includes('.css')) {
-    event.respondWith(handleFreshContent(event.request));
-  }
-  // AI model files - cache for offline functionality  
-  else if (url.includes('face-api') || url.includes('vladmandic')) {
+  // AI model files - cache first for performance
+  if (url.includes('face-api') || url.includes('vladmandic')) {
     event.respondWith(handleModelRequest(event.request));
   }
-  // Images - cache with revalidation
-  else if (event.request.destination === 'image') {
-    event.respondWith(handleImageRequest(event.request));
+  // External CDN resources - cache first
+  else if (url.includes('cdn.tailwindcss.com') || 
+           url.includes('cdnjs.cloudflare.com') ||
+           url.includes('cdn.jsdelivr.net')) {
+    event.respondWith(handleCDNRequest(event.request));
   }
-  // Everything else - network first
+  // Main app files - network first with fallback
+  else if (url.includes(self.location.origin)) {
+    event.respondWith(handleAppRequest(event.request));
+  }
+  // Everything else - just fetch normally
   else {
-    event.respondWith(handleFreshContent(event.request));
+    event.respondWith(fetch(event.request));
   }
 });
 
-// Always fetch fresh content with cache busting
-async function handleFreshContent(request) {
-  try {
-    console.log('FaceAttend SW: Fetching fresh content:', request.url);
-    
-    // Add cache-busting timestamp for code files
-    const cacheBustedUrl = new URL(request.url);
-    if (cacheBustedUrl.pathname.endsWith('.html') || 
-        cacheBustedUrl.pathname === '/' || 
-        cacheBustedUrl.pathname.endsWith('.js') ||
-        cacheBustedUrl.pathname.endsWith('.css')) {
-      cacheBustedUrl.searchParams.set('_cb', Date.now());
-    }
-    
-    const freshRequest = new Request(cacheBustedUrl.href, {
-      method: request.method,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      mode: request.mode === 'navigate' ? 'same-origin' : request.mode,
-      credentials: request.credentials
-    });
-    
-    const response = await fetch(freshRequest);
-    
-    // Add no-cache headers to response
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders
-    });
-    
-  } catch (error) {
-    console.error('FaceAttend SW: Fresh fetch failed:', error);
-    
-    // Offline fallback for HTML pages
-    if (request.url.includes('.html') || request.url.endsWith('/')) {
-      return new Response(`
-        <!DOCTYPE html>
-        <html><head><title>FaceAttend - Offline</title></head>
-        <body style="font-family: Arial; padding: 20px; text-align: center; background: #1a1a2e; color: white;">
-          <h1>🎭 FaceAttend</h1>
-          <p>You're offline. Please check your connection and try again.</p>
-          <button onclick="location.reload()" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
-            🔄 Retry Connection
-          </button>
-          <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">Your data is safe and will sync when you're back online.</p>
-        </body></html>
-      `, { 
-        headers: { 'Content-Type': 'text/html' } 
-      });
-    }
-    
-    throw error;
-  }
-}
-
-// Keep your existing model handling (it's perfect)
+// Handle AI model requests - cache first for performance
 async function handleModelRequest(request) {
   try {
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
-      console.log('FaceAttend SW: Serving AI model from cache');
+      console.log('FaceAttend SW: Serving model from cache');
       return cachedResponse;
     }
 
-    console.log('FaceAttend SW: Fetching AI model from network');
+    console.log('FaceAttend SW: Fetching model from network');
     const networkResponse = await fetch(request, {
       mode: 'cors',
       credentials: 'omit'
@@ -186,36 +110,155 @@ async function handleModelRequest(request) {
 
     if (networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
+      cache.put(request, networkResponse.clone()).catch(e => 
+        console.warn('Failed to cache model:', e)
+      );
     }
 
     return networkResponse;
 
   } catch (error) {
-    console.error('FaceAttend SW: AI model request failed', error);
-    return caches.match(request);
+    console.error('FaceAttend SW: Model request failed', error);
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    throw error;
   }
 }
 
-// Keep your existing image handling
-async function handleImageRequest(request) {
+// Handle CDN requests - cache first with network update
+async function handleCDNRequest(request) {
   try {
-    // Try network first for fresh images
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      // Return cached version immediately
+      fetch(request).then(response => {
+        if (response.ok) {
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(request, response).catch(e => 
+              console.warn('Failed to update CDN cache:', e)
+            );
+          });
+        }
+      }).catch(() => {}); // Ignore network errors for background update
+      
+      return cachedResponse;
+    }
+
+    // No cache, fetch from network
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
+      cache.put(request, networkResponse.clone()).catch(e => 
+        console.warn('Failed to cache CDN resource:', e)
+      );
     }
-    throw new Error('Network failed');
+    return networkResponse;
+
   } catch (error) {
-    // Fallback to cache
-    const cachedResponse = await caches.match(request);
-    return cachedResponse || new Response('', { status: 404 });
+    console.error('FaceAttend SW: CDN request failed', error);
+    throw error;
   }
 }
 
-// Enhanced message handling with instant updates
+// Handle app requests - network first with cache fallback
+async function handleAppRequest(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request, {
+      method: request.method,
+      headers: request.headers,
+      mode: 'same-origin',
+      credentials: request.credentials,
+      cache: 'default' // Use browser's default caching
+    });
+
+    // Cache successful responses
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone()).catch(e => 
+        console.warn('Failed to cache app resource:', e)
+      );
+    }
+
+    return networkResponse;
+
+  } catch (error) {
+    console.error('FaceAttend SW: Network failed for app request');
+    
+    // Try cache fallback
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      console.log('FaceAttend SW: Serving from cache');
+      return cachedResponse;
+    }
+
+    // If it's the main page, return offline page
+    if (request.url.endsWith('/') || request.url.includes('.html')) {
+      return new Response(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>FaceAttend - Offline</title>
+          <style>
+            body { 
+              font-family: system-ui, -apple-system, sans-serif; 
+              padding: 20px; 
+              text-align: center; 
+              background: #1a1a2e; 
+              color: white; 
+              min-height: 100vh; 
+              display: flex; 
+              flex-direction: column; 
+              justify-content: center; 
+              align-items: center;
+            }
+            .container { max-width: 400px; }
+            h1 { color: #667eea; margin-bottom: 20px; }
+            button { 
+              background: #667eea; 
+              color: white; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-size: 16px; 
+              margin-top: 20px;
+            }
+            button:hover { background: #5a6fd8; }
+            .status { 
+              margin-top: 20px; 
+              font-size: 14px; 
+              opacity: 0.7; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>FaceAttend</h1>
+            <p>Unable to connect to the server. Please check your internet connection and try again.</p>
+            <button onclick="location.reload()">Retry Connection</button>
+            <div class="status">Your data is safe and will be available when you're back online.</div>
+          </div>
+        </body>
+        </html>
+      `, { 
+        headers: { 
+          'Content-Type': 'text/html',
+          'Cache-Control': 'no-cache'
+        } 
+      });
+    }
+    
+    // For other requests, just throw the error
+    throw error;
+  }
+}
+
+// Message handling
 self.addEventListener('message', (event) => {
   console.log('FaceAttend SW: Message received', event.data);
   
@@ -242,23 +285,24 @@ self.addEventListener('message', (event) => {
 
   if (event.data && event.data.type === 'REGISTER_SYNC') {
     if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-      self.registration.sync.register('attendance-sync');
+      self.registration.sync.register('attendance-sync').catch(() => {});
     }
   }
 
-  // User data management with separate cache
   if (event.data && event.data.type === 'SAVE_USER_DATA') {
     saveUserData(event.data.key, event.data.data);
   }
   
   if (event.data && event.data.type === 'GET_USER_DATA') {
     getUserData(event.data.key).then(data => {
-      event.ports[0].postMessage({ data });
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ data });
+      }
     });
   }
 });
 
-// User data functions (separate from code cache)
+// User data functions
 async function saveUserData(key, data) {
   try {
     const cache = await caches.open(DATA_CACHE_NAME);
@@ -280,21 +324,7 @@ async function getUserData(key) {
   }
 }
 
-// Notify clients of updates
-function notifyClientsOfUpdate() {
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
-      client.postMessage({ 
-        type: 'UPDATE_AVAILABLE',
-        message: 'New version available! Click to update.',
-        version: CACHE_NAME
-      });
-    });
-  });
-}
-
-// Keep ALL your existing functionality below
-// Background sync for offline attendance marking
+// Background sync for offline functionality
 self.addEventListener('sync', (event) => {
   if (event.tag === 'attendance-sync') {
     console.log('FaceAttend SW: Background sync triggered');
@@ -307,14 +337,12 @@ async function syncAttendanceData() {
     console.log('FaceAttend SW: Syncing attendance data');
     
     const clients = await self.clients.matchAll();
-    
     if (clients.length > 0) {
       clients[0].postMessage({
         type: 'SYNC_ATTENDANCE',
         timestamp: Date.now()
       });
     }
-    
     return Promise.resolve();
   } catch (error) {
     console.error('FaceAttend SW: Attendance sync failed', error);
@@ -322,14 +350,14 @@ async function syncAttendanceData() {
   }
 }
 
-// Keep your push notifications
+// Push notifications
 self.addEventListener('push', (event) => {
   console.log('FaceAttend SW: Push notification received');
   
   let notificationData = {
     title: 'FaceAttend Reminder',
     body: 'Time to take attendance!',
-    icon: '/facecam.jpeg', // Use your existing icon
+    icon: '/facecam.jpeg',
     badge: '/facecam.jpeg'
   };
   
@@ -382,7 +410,7 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Keep notification clicks
+// Notification clicks
 self.addEventListener('notificationclick', (event) => {
   console.log('FaceAttend SW: Notification clicked', event.action);
   event.notification.close();
@@ -425,7 +453,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Keep your preload function
+// Preload AI models
 async function preloadAIModels() {
   console.log('FaceAttend SW: Preloading AI models');
   const cache = await caches.open(CACHE_NAME);
@@ -443,19 +471,23 @@ async function preloadAIModels() {
   try {
     await Promise.allSettled(
       modelUrls.map(async url => {
-        const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
-        if (response.ok) {
-          await cache.put(url, response);
+        try {
+          const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+          if (response.ok) {
+            await cache.put(url, response);
+          }
+        } catch (error) {
+          console.warn(`Failed to preload model: ${url}`, error);
         }
       })
     );
-    console.log('FaceAttend SW: AI models preloaded successfully');
+    console.log('FaceAttend SW: AI models preloaded');
   } catch (error) {
     console.error('FaceAttend SW: Error preloading AI models', error);
   }
 }
 
-// Keep error handling
+// Error handling
 self.addEventListener('error', (event) => {
   console.error('FaceAttend SW: Global error', event.error);
 });
@@ -465,7 +497,7 @@ self.addEventListener('unhandledrejection', (event) => {
   event.preventDefault();
 });
 
-// Keep periodic sync
+// Periodic sync
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'attendance-backup') {
     event.waitUntil(backupAttendanceData());
@@ -487,9 +519,3 @@ async function backupAttendanceData() {
     console.error('FaceAttend SW: Backup failed', error);
   }
 }
-
-// Auto-check for updates every 30 seconds
-setInterval(() => {
-  console.log('FaceAttend SW: Auto-checking for updates...');
-  // Browser automatically checks for SW updates
-}, 30000);
