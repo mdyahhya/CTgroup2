@@ -6,18 +6,21 @@ const CACHE_NAME = 'faceattend-v2.1.0'; // Increment for updates
 const DATA_CACHE_NAME = 'faceattend-data-v1.0.0'; // Separate cache for user data
 
 // Only cache essential offline resources - NO CODE FILES
+// Replace the tiny model URLs with standard model URLs in sw.js
 const urlsToCache = [
   '/manifest.json',
   '/facecam.jpeg',
-  // Only cache the optimized AI models (tiny versions)
-  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/tiny_face_detector_model-weights_manifest.json',
-  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/tiny_face_detector_model-shard1',
-  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_landmark_68_tiny_model-weights_manifest.json',
-  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_landmark_68_tiny_model-shard1',
+  // Standard models instead of tiny
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/ssd_mobilenetv1_model-weights_manifest.json',
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/ssd_mobilenetv1_model-shard1',
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/ssd_mobilenetv1_model-shard2',
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_landmark_68_model-weights_manifest.json',
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_landmark_68_model-shard1',
   'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_recognition_model-weights_manifest.json',
   'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_recognition_model-shard1',
   'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/face_recognition_model-shard2'
 ];
+
 
 // Resources that should NEVER be cached (always fetch fresh)
 const NEVER_CACHE = [
