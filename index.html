@@ -786,219 +786,28 @@
         let recognitionInterval = null;
         let capturedFaceDescriptor = null;
 
-        // Enhanced PWA Installation with proper install detection
-let deferredPrompt;
-let isAppInstalled = false;
-
-// Detect if app is already installed on page load
-window.addEventListener('load', () => {
-    checkInstallationStatus();
-});
-
-// Listen for beforeinstallprompt event
-window.addEventListener('beforeinstallprompt', (e) => {
-    console.log('beforeinstallprompt fired - app not installed');
-    e.preventDefault();
-    deferredPrompt = e;
-    isAppInstalled = false; // Definitely not installed if this fires
-    
-    if (!isAppInstalled) {
-        toggleInstallButton();
-    }
-});
-
-// Listen for app installation
-window.addEventListener('appinstalled', (e) => {
-    console.log('App was installed');
-    isAppInstalled = true;
-    markInstallAttempted();
-    hideInstallButton();
-    deferredPrompt = null;
-    showMessage('App installed successfully!', 'success');
-});
-
-// Enhanced installation status check
-async function checkInstallationStatus() {
-    // Method 1: Check display mode (most reliable)
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        console.log('Running in standalone mode - app is installed');
-        isAppInstalled = true;
-        hideInstallButton();
-        return;
-    }
-    
-    // Method 2: Check iOS standalone
-    if (window.navigator.standalone === true) {
-        console.log('iOS standalone mode - app is installed');
-        isAppInstalled = true;
-        hideInstallButton();
-        return;
-    }
-    
-    // Method 3: Check for related apps (if supported)
-    if ('getInstalledRelatedApps' in navigator) {
-        try {
-            const relatedApps = await navigator.getInstalledRelatedApps();
-            if (relatedApps.length > 0) {
-                console.log('Related app found - PWA is installed');
-                isAppInstalled = true;
-                hideInstallButton();
-                return;
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!isAppInstalled()) {
+                toggleInstallButton();
             }
-        } catch (error) {
-            console.log('getInstalledRelatedApps not available or failed');
-        }
-    }
-    
-    // Method 4: Check localStorage flag (backup method)
-    if (localStorage.getItem('pwa-install-attempted') === 'true') {
-        console.log('Install attempted previously');
-        isAppInstalled = true;
-        hideInstallButton();
-        return;
-    }
-    
-    // Method 5: Check if launched from home screen (Android)
-    if (document.referrer.includes('android-app://')) {
-        console.log('Launched from Android home screen');
-        isAppInstalled = true;
-        hideInstallButton();
-        return;
-    }
-    
-    // Method 6: Check URL parameters
-    if (window.location.search.includes('utm_source=homescreen') || 
-        window.location.search.includes('source=pwa')) {
-        console.log('Launched from installed app');
-        isAppInstalled = true;
-        hideInstallButton();
-        return;
-    }
-    
-    console.log('App not detected as installed');
-    isAppInstalled = false;
-}
+        });
 
-// Updated install button click handler
-document.getElementById('installConfirm').addEventListener('click', async () => {
-    hideInstallPopup();
-    
-    if (deferredPrompt && !isAppInstalled) {
-        try {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            
-            if (outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-                markInstallAttempted();
-                // Don't set isAppInstalled here - wait for appinstalled event
-            } else {
-                console.log('User dismissed the install prompt');
+        document.getElementById('installConfirm').addEventListener('click', async () => {
+            hideInstallPopup();
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    markInstallAttempted();
+                }
+                deferredPrompt = null;
             }
-            
-            deferredPrompt = null;
-        } catch (error) {
-            console.error('Error showing install prompt:', error);
-        }
-    }
-});
-
-// Hide install button permanently
-function hideInstallButton() {
-    const installContainer = document.getElementById('install-button-container');
-    const installPopup = document.getElementById('install-popup-overlay');
-    
-    if (installContainer) {
-        installContainer.style.display = 'none';
-        installContainer.classList.add('hidden');
-    }
-    
-    if (installPopup) {
-        installPopup.classList.add('hidden');
-    }
-    
-    console.log('Install button hidden permanently');
-}
-
-// Show install button (only if not installed)
-function showInstallButton() {
-    if (!isAppInstalled && deferredPrompt) {
-        const installContainer = document.getElementById('install-button-container');
-        if (installContainer) {
-            installContainer.style.display = 'block';
-            installContainer.classList.remove('hidden');
-        }
-        console.log('Install button shown');
-    }
-}
-
-// Updated toggle function
-function toggleInstallButton() {
-    if (isAppInstalled) {
-        hideInstallButton();
-        return;
-    }
-    
-    if (currentSection === 'recognize' && !isAppInstalled && deferredPrompt) {
-        showInstallButton();
-    } else {
-        const installContainer = document.getElementById('install-button-container');
-        if (installContainer) {
-            installContainer.classList.add('hidden');
-        }
-    }
-}
-
-// Keep your existing functions but update them
-function markInstallAttempted() {
-    try {
-        localStorage.setItem('pwa-install-attempted', 'true');
-        isAppInstalled = true;
-    } catch (e) {
-        console.log('Could not save install state');
-    }
-}
-
-// Updated function - only use for testing
-function resetInstallState() {
-    try {
-        localStorage.removeItem('pwa-install-attempted');
-        isAppInstalled = false;
-        checkInstallationStatus();
-        console.log('Install state reset for testing');
-    } catch (e) {
-        console.log('Could not reset install state');
-    }
-}
-
-// Monitor display mode changes
-window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
-    if (e.matches) {
-        console.log('App entered standalone mode');
-        isAppInstalled = true;
-        hideInstallButton();
-    }
-});
-
-// Check installation status periodically (optional)
-setInterval(() => {
-    if (!isAppInstalled) {
-        checkInstallationStatus();
-    }
-}, 30000); // Check every 30 seconds
-
-// Update your existing showSection function
-function showSection(section) {
-    document.getElementById('enrollSection').classList.add('hidden');
-    document.getElementById('recognizeSection').classList.add('hidden');
-    document.getElementById('attendanceSection').classList.add('hidden');
-    
-    document.getElementById(section + 'Section').classList.remove('hidden');
-    currentSection = section;
-    
-    // Only show install button if app is not installed
-    toggleInstallButton();
-}
+        });
 
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -1062,7 +871,15 @@ function showSection(section) {
 
 
         // Navigation
-        
+        function showSection(section) {
+            document.getElementById('enrollSection').classList.add('hidden');
+            document.getElementById('recognizeSection').classList.add('hidden');
+            document.getElementById('attendanceSection').classList.add('hidden');
+            
+            document.getElementById(section + 'Section').classList.remove('hidden');
+            currentSection = section;
+            toggleInstallButton();
+        }
 
         document.getElementById('enrollBtn').addEventListener('click', () => showSection('enroll'));
         document.getElementById('recognizeBtn').addEventListener('click', () => showSection('recognize'));
@@ -1357,6 +1174,7 @@ async function startRecognition() {
 }
 
 
+
         function displayRecognizedStudent(student, distance) {
             const confidence = Math.round((1 - distance) * 100);
             
@@ -1537,9 +1355,22 @@ async function startRecognition() {
             return false;
         }
 
-        
+        function markInstallAttempted() {
+            try {
+                localStorage.setItem('pwa-install-attempted', 'true');
+            } catch (e) {
+                console.log('Could not save install state');
+            }
+        }
 
-        
+        function resetInstallState() {
+            try {
+                localStorage.removeItem('pwa-install-attempted');
+                toggleInstallButton();
+            } catch (e) {
+                console.log('Could not reset install state');
+            }
+        }
 
         function toggleInstallButton() {
             const installContainer = document.getElementById('install-button-container');
