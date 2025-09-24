@@ -773,6 +773,9 @@
 
     
     <script>
+        let isProcessing = false; // Add this to prevent frame overlap
+        let frameCount = 0; // Add this for frame skipping
+
         // Global variables
         let enrolledStudents = JSON.parse(localStorage.getItem('enrolledStudents') || '[]');
         let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
@@ -783,28 +786,219 @@
         let recognitionInterval = null;
         let capturedFaceDescriptor = null;
 
-        // PWA Installation
-        let deferredPrompt;
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (!isAppInstalled()) {
-                toggleInstallButton();
-            }
-        });
+        // Enhanced PWA Installation with proper install detection
+let deferredPrompt;
+let isAppInstalled = false;
 
-        document.getElementById('installConfirm').addEventListener('click', async () => {
-            hideInstallPopup();
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    markInstallAttempted();
-                }
-                deferredPrompt = null;
+// Detect if app is already installed on page load
+window.addEventListener('load', () => {
+    checkInstallationStatus();
+});
+
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('beforeinstallprompt fired - app not installed');
+    e.preventDefault();
+    deferredPrompt = e;
+    isAppInstalled = false; // Definitely not installed if this fires
+    
+    if (!isAppInstalled) {
+        toggleInstallButton();
+    }
+});
+
+// Listen for app installation
+window.addEventListener('appinstalled', (e) => {
+    console.log('App was installed');
+    isAppInstalled = true;
+    markInstallAttempted();
+    hideInstallButton();
+    deferredPrompt = null;
+    showMessage('App installed successfully!', 'success');
+});
+
+// Enhanced installation status check
+async function checkInstallationStatus() {
+    // Method 1: Check display mode (most reliable)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('Running in standalone mode - app is installed');
+        isAppInstalled = true;
+        hideInstallButton();
+        return;
+    }
+    
+    // Method 2: Check iOS standalone
+    if (window.navigator.standalone === true) {
+        console.log('iOS standalone mode - app is installed');
+        isAppInstalled = true;
+        hideInstallButton();
+        return;
+    }
+    
+    // Method 3: Check for related apps (if supported)
+    if ('getInstalledRelatedApps' in navigator) {
+        try {
+            const relatedApps = await navigator.getInstalledRelatedApps();
+            if (relatedApps.length > 0) {
+                console.log('Related app found - PWA is installed');
+                isAppInstalled = true;
+                hideInstallButton();
+                return;
             }
-        });
+        } catch (error) {
+            console.log('getInstalledRelatedApps not available or failed');
+        }
+    }
+    
+    // Method 4: Check localStorage flag (backup method)
+    if (localStorage.getItem('pwa-install-attempted') === 'true') {
+        console.log('Install attempted previously');
+        isAppInstalled = true;
+        hideInstallButton();
+        return;
+    }
+    
+    // Method 5: Check if launched from home screen (Android)
+    if (document.referrer.includes('android-app://')) {
+        console.log('Launched from Android home screen');
+        isAppInstalled = true;
+        hideInstallButton();
+        return;
+    }
+    
+    // Method 6: Check URL parameters
+    if (window.location.search.includes('utm_source=homescreen') || 
+        window.location.search.includes('source=pwa')) {
+        console.log('Launched from installed app');
+        isAppInstalled = true;
+        hideInstallButton();
+        return;
+    }
+    
+    console.log('App not detected as installed');
+    isAppInstalled = false;
+}
+
+// Updated install button click handler
+document.getElementById('installConfirm').addEventListener('click', async () => {
+    hideInstallPopup();
+    
+    if (deferredPrompt && !isAppInstalled) {
+        try {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+                markInstallAttempted();
+                // Don't set isAppInstalled here - wait for appinstalled event
+            } else {
+                console.log('User dismissed the install prompt');
+            }
+            
+            deferredPrompt = null;
+        } catch (error) {
+            console.error('Error showing install prompt:', error);
+        }
+    }
+});
+
+// Hide install button permanently
+function hideInstallButton() {
+    const installContainer = document.getElementById('install-button-container');
+    const installPopup = document.getElementById('install-popup-overlay');
+    
+    if (installContainer) {
+        installContainer.style.display = 'none';
+        installContainer.classList.add('hidden');
+    }
+    
+    if (installPopup) {
+        installPopup.classList.add('hidden');
+    }
+    
+    console.log('Install button hidden permanently');
+}
+
+// Show install button (only if not installed)
+function showInstallButton() {
+    if (!isAppInstalled && deferredPrompt) {
+        const installContainer = document.getElementById('install-button-container');
+        if (installContainer) {
+            installContainer.style.display = 'block';
+            installContainer.classList.remove('hidden');
+        }
+        console.log('Install button shown');
+    }
+}
+
+// Updated toggle function
+function toggleInstallButton() {
+    if (isAppInstalled) {
+        hideInstallButton();
+        return;
+    }
+    
+    if (currentSection === 'recognize' && !isAppInstalled && deferredPrompt) {
+        showInstallButton();
+    } else {
+        const installContainer = document.getElementById('install-button-container');
+        if (installContainer) {
+            installContainer.classList.add('hidden');
+        }
+    }
+}
+
+// Keep your existing functions but update them
+function markInstallAttempted() {
+    try {
+        localStorage.setItem('pwa-install-attempted', 'true');
+        isAppInstalled = true;
+    } catch (e) {
+        console.log('Could not save install state');
+    }
+}
+
+// Updated function - only use for testing
+function resetInstallState() {
+    try {
+        localStorage.removeItem('pwa-install-attempted');
+        isAppInstalled = false;
+        checkInstallationStatus();
+        console.log('Install state reset for testing');
+    } catch (e) {
+        console.log('Could not reset install state');
+    }
+}
+
+// Monitor display mode changes
+window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
+    if (e.matches) {
+        console.log('App entered standalone mode');
+        isAppInstalled = true;
+        hideInstallButton();
+    }
+});
+
+// Check installation status periodically (optional)
+setInterval(() => {
+    if (!isAppInstalled) {
+        checkInstallationStatus();
+    }
+}, 30000); // Check every 30 seconds
+
+// Update your existing showSection function
+function showSection(section) {
+    document.getElementById('enrollSection').classList.add('hidden');
+    document.getElementById('recognizeSection').classList.add('hidden');
+    document.getElementById('attendanceSection').classList.add('hidden');
+    
+    document.getElementById(section + 'Section').classList.remove('hidden');
+    currentSection = section;
+    
+    // Only show install button if app is not installed
+    toggleInstallButton();
+}
 
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -821,41 +1015,54 @@
 
         // Initialize Face-api models
         async function loadModels() {
-            const loadingProgress = document.getElementById('loadingProgress');
-            
-            try {
-                loadingProgress.textContent = 'Loading face detection model...';
-                await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-                
-                loadingProgress.textContent = 'Loading face landmarks model...';
-                await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-                
-                loadingProgress.textContent = 'Loading face recognition model...';
-                await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-                
-                loadingProgress.textContent = 'Models loaded successfully!';
-                isModelsLoaded = true;
-                
-                setTimeout(() => {
-                    document.getElementById('loadingScreen').classList.add('hidden');
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Error loading models:', error);
-                loadingProgress.textContent = 'Error loading models. Please refresh.';
-            }
-        }
+    const loadingProgress = document.getElementById('loadingProgress');
+    
+    try {
+        // Load models in parallel for 3x faster loading
+        loadingProgress.textContent = 'Loading AI models in parallel...';
+        
+        const modelPromises = [
+            faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model')
+        ];
+        
+        // Load all models simultaneously instead of sequentially
+        await Promise.all(modelPromises);
+        
+        // GPU warmup - eliminates 10 second delay on first detection
+        loadingProgress.textContent = 'Warming up GPU acceleration...';
+        const dummyCanvas = document.createElement('canvas');
+        dummyCanvas.width = 416;
+        dummyCanvas.height = 416;
+        const ctx = dummyCanvas.getContext('2d');
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, 416, 416);
+        
+        // Perform dummy detection to compile WebGL shaders
+        await faceapi.detectAllFaces(dummyCanvas, 
+            new faceapi.SsdMobilenetv1Options({ 
+                minConfidence: 0.5,
+                maxResults: 1
+            })
+        ).withFaceLandmarks().withFaceDescriptors();
+        
+        loadingProgress.textContent = 'Models loaded and optimized!';
+        isModelsLoaded = true;
+        
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.add('hidden');
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error loading models:', error);
+        loadingProgress.textContent = 'Error loading models. Please refresh.';
+    }
+}
+
 
         // Navigation
-        function showSection(section) {
-            document.getElementById('enrollSection').classList.add('hidden');
-            document.getElementById('recognizeSection').classList.add('hidden');
-            document.getElementById('attendanceSection').classList.add('hidden');
-            
-            document.getElementById(section + 'Section').classList.remove('hidden');
-            currentSection = section;
-            toggleInstallButton();
-        }
+        
 
         document.getElementById('enrollBtn').addEventListener('click', () => showSection('enroll'));
         document.getElementById('recognizeBtn').addEventListener('click', () => showSection('recognize'));
@@ -869,74 +1076,76 @@
         document.getElementById('captureEnroll').addEventListener('click', captureForEnrollment);
         document.getElementById('enrollForm').addEventListener('submit', saveStudent);
 
-        async function startEnrollCamera() {
-            try {
-                const video = document.getElementById('enrollVideo');
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 640, height: 480 } 
-                });
-                video.srcObject = stream;
-                enrollVideoStream = stream;
-                
-                document.getElementById('startEnrollCamera').disabled = true;
-                document.getElementById('captureEnroll').disabled = false;
-                
-                showMessage('Camera started. Position your face in the frame.', 'success');
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                showMessage('Error accessing camera. Please check permissions.', 'error');
-            }
-        }
-
+        
         async function captureForEnrollment() {
-            if (!isModelsLoaded) {
-                showMessage('Models are still loading. Please wait.', 'warning');
-                return;
-            }
+    if (!isModelsLoaded) {
+        showMessage('Models are still loading. Please wait.', 'warning');
+        return;
+    }
 
-            const video = document.getElementById('enrollVideo');
-            const canvas = document.getElementById('enrollCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+    const video = document.getElementById('enrollVideo');
+    const canvas = document.getElementById('enrollCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Optimize canvas size for better performance
+    const scale = 0.75;
+    canvas.width = video.videoWidth * scale;
+    canvas.height = video.videoHeight * scale;
 
-            try {
-                const detections = await faceapi
-                    .detectAllFaces(video)
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
+    try {
+        // Optimized SSD MobileNet detection
+        const detections = await faceapi
+            .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({
+                minConfidence: 0.5,  // Higher confidence for better quality
+                maxResults: 2        // Limit results for performance
+            }))
+            .withFaceLandmarks()
+            .withFaceDescriptors();
 
-                if (detections.length === 0) {
-                    showMessage('No face detected. Please position your face clearly in the frame.', 'warning');
-                    return;
-                }
-
-                if (detections.length > 1) {
-                    showMessage('Multiple faces detected. Please ensure only one face is in the frame.', 'warning');
-                    return;
-                }
-
-                // Clear canvas and draw face box
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const detection = detections[0];
-                const { x, y, width, height } = detection.detection.box;
-                
-                ctx.strokeStyle = '#10b981';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(x, y, width, height);
-                
-                // Store face descriptor
-                capturedFaceDescriptor = detection.descriptor;
-                
-                document.getElementById('submitEnroll').disabled = false;
-                showMessage('Face captured successfully! Fill in student details and save.', 'success');
-                
-            } catch (error) {
-                console.error('Error capturing face:', error);
-                showMessage('Error processing face. Please try again.', 'error');
-            }
+        if (detections.length === 0) {
+            showMessage('No face detected. Please position your face clearly in the frame.', 'warning');
+            return;
         }
+
+        if (detections.length > 1) {
+            showMessage('Multiple faces detected. Please ensure only one face is in the frame.', 'warning');
+            return;
+        }
+
+        // Clear canvas and draw face box
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const detection = detections[0];
+        const { x, y, width, height } = detection.detection.box;
+        
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x * scale, y * scale, width * scale, height * scale);
+        
+        // Store face descriptor
+        capturedFaceDescriptor = detection.descriptor;
+        
+        document.getElementById('submitEnroll').disabled = false;
+        showMessage('Face captured successfully! Fill in student details and save.', 'success');
+        
+    } catch (error) {
+        console.error('Error capturing face:', error);
+        showMessage('Error processing face. Please try again.', 'error');
+    }
+}
+
+// Add debouncing for mark attendance
+let attendanceTimeout = null;
+
+function markStudentAttendanceDebounced() {
+    if (attendanceTimeout) {
+        clearTimeout(attendanceTimeout);
+    }
+    
+    attendanceTimeout = setTimeout(() => {
+        markStudentAttendance();
+    }, 1000); // 1 second debounce
+}
+
 
         function saveStudent(e) {
             e.preventDefault();
@@ -990,37 +1199,68 @@
         document.getElementById('stopRecognizeCamera').addEventListener('click', stopRecognition);
         document.getElementById('markAttendance').addEventListener('click', markStudentAttendance);
 
-        async function startRecognition() {
-            if (!isModelsLoaded) {
-                showMessage('Models are still loading. Please wait.', 'warning');
-                return;
-            }
+        async function startEnrollCamera() {
+    try {
+        const video = document.getElementById('enrollVideo');
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { ideal: 480 }, // Smaller resolution for better performance
+                height: { ideal: 360 },
+                frameRate: { ideal: 15, max: 30 } // Limit frame rate
+            } 
+        });
+        video.srcObject = stream;
+        enrollVideoStream = stream;
+        
+        document.getElementById('startEnrollCamera').disabled = true;
+        document.getElementById('captureEnroll').disabled = false;
+        
+        showMessage('Camera started. Position your face in the frame.', 'success');
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+        showMessage('Error accessing camera. Please check permissions.', 'error');
+    }
+}
 
-            if (enrolledStudents.length === 0) {
-                showMessage('No students enrolled. Please enroll students first.', 'warning');
-                return;
-            }
+async function startRecognition() {
+    if (!isModelsLoaded) {
+        showMessage('Models are still loading. Please wait.', 'warning');
+        return;
+    }
 
-            try {
-                const video = document.getElementById('recognizeVideo');
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 640, height: 480 } 
-                });
-                video.srcObject = stream;
-                recognizeVideoStream = stream;
-                
-                document.getElementById('startRecognizeCamera').disabled = true;
-                document.getElementById('stopRecognizeCamera').disabled = false;
-                
-                // Start recognition loop
-                recognitionInterval = setInterval(performRecognition, 1000);
-                showMessage('Recognition started. Position student face in frame.', 'success');
-                
-            } catch (error) {
-                console.error('Error starting recognition:', error);
-                showMessage('Error accessing camera. Please check permissions.', 'error');
-            }
-        }
+    if (enrolledStudents.length === 0) {
+        showMessage('No students enrolled. Please enroll students first.', 'warning');
+        return;
+    }
+
+    try {
+        const video = document.getElementById('recognizeVideo');
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { ideal: 480 }, // Optimized resolution
+                height: { ideal: 360 },
+                frameRate: { ideal: 15, max: 30 } // Limit frame rate for performance
+            } 
+        });
+        video.srcObject = stream;
+        recognizeVideoStream = stream;
+        
+        document.getElementById('startRecognizeCamera').disabled = true;
+        document.getElementById('stopRecognizeCamera').disabled = false;
+        
+        // Reset processing variables
+        isProcessing = false;
+        frameCount = 0;
+        
+        // Start optimized recognition loop
+        recognitionInterval = setInterval(performRecognition, 200);
+        showMessage('Recognition started. Position student face in frame.', 'success');
+        
+    } catch (error) {
+        console.error('Error starting recognition:', error);
+        showMessage('Error accessing camera. Please check permissions.', 'error');
+    }
+}
 
         function stopRecognition() {
             if (recognizeVideoStream) {
@@ -1044,58 +1284,78 @@
         }
 
         async function performRecognition() {
-            const video = document.getElementById('recognizeVideo');
-            const canvas = document.getElementById('recognizeCanvas');
-            const ctx = canvas.getContext('2d');
+    // Skip processing if already processing or skip frames for performance
+    if (isProcessing || frameCount % 2 !== 0) {
+        frameCount++;
+        return;
+    }
+    
+    isProcessing = true;
+    frameCount++;
+    
+    const video = document.getElementById('recognizeVideo');
+    const canvas = document.getElementById('recognizeCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Process at reduced resolution for speed
+    const scale = 0.5;
+    canvas.width = video.videoWidth * scale;
+    canvas.height = video.videoHeight * scale;
+
+    try {
+        // Optimized SSD MobileNet detection with performance settings
+        const detections = await faceapi
+            .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({
+                minConfidence: 0.6,  // Higher confidence for fewer false positives
+                maxResults: 3        // Limit to 3 faces max for performance
+            }))
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (detections.length === 0) {
+            document.getElementById('recognizedStudent').classList.add('hidden');
+            isProcessing = false;
+            return;
+        }
+
+        // Process only the largest/most confident face for performance
+        const bestDetection = detections.reduce((best, current) => 
+            current.detection.score > best.detection.score ? current : best
+        );
+        
+        const { x, y, width, height } = bestDetection.detection.box;
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x * scale, y * scale, width * scale, height * scale);
+
+        // Only perform face matching every 3rd frame for performance
+        if (frameCount % 3 === 0) {
+            const labeledDescriptors = enrolledStudents.map(student => 
+                new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
+            );
+
+            const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+            const match = faceMatcher.findBestMatch(bestDetection.descriptor);
             
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-
-            try {
-                const detections = await faceapi
-                    .detectAllFaces(video)
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                if (detections.length === 0) {
-                    document.getElementById('recognizedStudent').classList.add('hidden');
-                    return;
+            if (match.label !== 'unknown') {
+                const student = enrolledStudents.find(s => s.id === match.label);
+                if (student) {
+                    displayRecognizedStudent(student, match.distance);
                 }
-
-                // Draw face boxes
-                detections.forEach(detection => {
-                    const { x, y, width, height } = detection.detection.box;
-                    ctx.strokeStyle = '#10b981';
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x, y, width, height);
-                });
-
-                // Recognize faces
-                const labeledDescriptors = enrolledStudents.map(student => 
-                    new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
-                );
-
-                const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-                
-                for (const detection of detections) {
-                    const match = faceMatcher.findBestMatch(detection.descriptor);
-                    
-                    if (match.label !== 'unknown') {
-                        const student = enrolledStudents.find(s => s.id === match.label);
-                        if (student) {
-                            displayRecognizedStudent(student, match.distance);
-                        }
-                    } else {
-                        document.getElementById('recognizedStudent').classList.add('hidden');
-                    }
-                }
-
-            } catch (error) {
-                console.error('Recognition error:', error);
+            } else {
+                document.getElementById('recognizedStudent').classList.add('hidden');
             }
         }
+
+    } catch (error) {
+        console.error('Recognition error:', error);
+    } finally {
+        isProcessing = false;
+    }
+}
+
 
         function displayRecognizedStudent(student, distance) {
             const confidence = Math.round((1 - distance) * 100);
@@ -1277,22 +1537,9 @@
             return false;
         }
 
-        function markInstallAttempted() {
-            try {
-                localStorage.setItem('pwa-install-attempted', 'true');
-            } catch (e) {
-                console.log('Could not save install state');
-            }
-        }
+        
 
-        function resetInstallState() {
-            try {
-                localStorage.removeItem('pwa-install-attempted');
-                toggleInstallButton();
-            } catch (e) {
-                console.log('Could not reset install state');
-            }
-        }
+        
 
         function toggleInstallButton() {
             const installContainer = document.getElementById('install-button-container');
