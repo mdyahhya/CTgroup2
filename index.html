@@ -591,7 +591,7 @@
             <div class="nav-container">
                 <div class="nav-brand">
                     <i class="fas fa-user-check"></i>
-                    <h1>FaceAttend</h1>
+                    <h1>FaceAttend - By Yahya</h1>
                 </div>
                 
                 <div class="nav-buttons">
@@ -773,90 +773,121 @@
 
     
     <script>
-        let isProcessing = false; // Add this to prevent frame overlap
-        let frameCount = 0; // Add this for frame skipping
+        let isProcessing = false;
+let frameCount = 0;
 
-        // Global variables
-        let enrolledStudents = JSON.parse(localStorage.getItem('enrolledStudents') || '[]');
-        let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-        let currentSection = 'recognize';
-        let isModelsLoaded = false;
-        let enrollVideoStream = null;
-        let recognizeVideoStream = null;
-        let recognitionInterval = null;
-        let capturedFaceDescriptor = null;
+// Global variables - Using in-memory storage instead of localStorage
+let enrolledStudents = [];
+let attendanceRecords = [];
+let currentSection = 'recognize';
+let isModelsLoaded = false;
+let enrollVideoStream = null;
+let recognizeVideoStream = null;
+let recognitionInterval = null;
+let capturedFaceDescriptor = null;
 
-        // PWA Installation
-        let deferredPrompt;
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (!isAppInstalled()) {
-                toggleInstallButton();
-            }
-        });
+// PWA Installation
+let deferredPrompt;
 
-        document.getElementById('installConfirm').addEventListener('click', async () => {
-            hideInstallPopup();
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    markInstallAttempted();
-                }
-                deferredPrompt = null;
-            }
-        });
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!isAppInstalled()) {
+        toggleInstallButton();
+    }
+});
 
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then((registration) => {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch((registrationError) => {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
+document.getElementById('installConfirm').addEventListener('click', async () => {
+    hideInstallPopup();
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            markInstallAttempted();
+            toggleInstallButton(); // Hide button after successful install
         }
+        deferredPrompt = null;
+    }
+});
 
-        // Initialize Face-api models
-        async function loadModels() {
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then((registration) => {
+                console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+                console.log('SW registration failed: ', registrationError);
+            });
+    });
+}
+
+// Initialize Face-api models with better error handling
+async function loadModels() {
     const loadingProgress = document.getElementById('loadingProgress');
     
     try {
-        // Load models in parallel for 3x faster loading
-        loadingProgress.textContent = 'Loading AI models in parallel...';
+        loadingProgress.textContent = 'Loading AI models...';
         
-        const modelPromises = [
-            faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+        // Check if models are already loaded
+        if (isModelsLoaded) {
+            loadingProgress.textContent = 'Models already loaded!';
+            document.getElementById('loadingScreen').classList.add('hidden');
+            return;
+        }
+
+        // Clear any existing models first
+        faceapi.nets.ssdMobilenetv1.dispose?.();
+        faceapi.nets.faceLandmark68Net.dispose?.();
+        faceapi.nets.faceRecognitionNet.dispose?.();
+        
+        // Load models with timeout and retry logic
+        const loadWithTimeout = (promise, timeout = 30000) => {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Model loading timeout')), timeout)
+                )
+            ]);
+        };
+
+        loadingProgress.textContent = 'Loading detection model...';
+        await loadWithTimeout(
+            faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model')
+        );
+        
+        loadingProgress.textContent = 'Loading landmarks model...';
+        await loadWithTimeout(
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model')
+        );
+        
+        loadingProgress.textContent = 'Loading recognition model...';
+        await loadWithTimeout(
             faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model')
-        ];
+        );
+
+        // GPU warmup with error handling
+        loadingProgress.textContent = 'Optimizing for your device...';
+        try {
+            const dummyCanvas = document.createElement('canvas');
+            dummyCanvas.width = 416;
+            dummyCanvas.height = 416;
+            const ctx = dummyCanvas.getContext('2d');
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, 416, 416);
+            
+            await faceapi.detectAllFaces(dummyCanvas, 
+                new faceapi.SsdMobilenetv1Options({ 
+                    minConfidence: 0.5,
+                    maxResults: 1
+                })
+            ).withFaceLandmarks().withFaceDescriptors();
+        } catch (warmupError) {
+            console.warn('GPU warmup failed, but models loaded:', warmupError);
+        }
         
-        // Load all models simultaneously instead of sequentially
-        await Promise.all(modelPromises);
-        
-        // GPU warmup - eliminates 10 second delay on first detection
-        loadingProgress.textContent = 'Warming up GPU acceleration...';
-        const dummyCanvas = document.createElement('canvas');
-        dummyCanvas.width = 416;
-        dummyCanvas.height = 416;
-        const ctx = dummyCanvas.getContext('2d');
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, 416, 416);
-        
-        // Perform dummy detection to compile WebGL shaders
-        await faceapi.detectAllFaces(dummyCanvas, 
-            new faceapi.SsdMobilenetv1Options({ 
-                minConfidence: 0.5,
-                maxResults: 1
-            })
-        ).withFaceLandmarks().withFaceDescriptors();
-        
-        loadingProgress.textContent = 'Models loaded and optimized!';
+        loadingProgress.textContent = 'Models loaded successfully!';
         isModelsLoaded = true;
         
         setTimeout(() => {
@@ -865,36 +896,42 @@
         
     } catch (error) {
         console.error('Error loading models:', error);
-        loadingProgress.textContent = 'Error loading models. Please refresh.';
+        loadingProgress.textContent = 'Error loading models. Check internet connection and refresh.';
+        isModelsLoaded = false;
+        
+        // Show retry button after error
+        setTimeout(() => {
+            if (!isModelsLoaded) {
+                loadingProgress.innerHTML = 'Error loading models. <button onclick="loadModels()" class="bg-blue-500 text-white px-4 py-2 rounded ml-2">Retry</button>';
+            }
+        }, 2000);
     }
 }
 
+// Navigation
+function showSection(section) {
+    document.getElementById('enrollSection').classList.add('hidden');
+    document.getElementById('recognizeSection').classList.add('hidden');
+    document.getElementById('attendanceSection').classList.add('hidden');
+    
+    document.getElementById(section + 'Section').classList.remove('hidden');
+    currentSection = section;
+    toggleInstallButton();
+}
 
-        // Navigation
-        function showSection(section) {
-            document.getElementById('enrollSection').classList.add('hidden');
-            document.getElementById('recognizeSection').classList.add('hidden');
-            document.getElementById('attendanceSection').classList.add('hidden');
-            
-            document.getElementById(section + 'Section').classList.remove('hidden');
-            currentSection = section;
-            toggleInstallButton();
-        }
+document.getElementById('enrollBtn').addEventListener('click', () => showSection('enroll'));
+document.getElementById('recognizeBtn').addEventListener('click', () => showSection('recognize'));
+document.getElementById('attendanceBtn').addEventListener('click', () => {
+    showSection('attendance');
+    loadAttendanceTable();
+});
 
-        document.getElementById('enrollBtn').addEventListener('click', () => showSection('enroll'));
-        document.getElementById('recognizeBtn').addEventListener('click', () => showSection('recognize'));
-        document.getElementById('attendanceBtn').addEventListener('click', () => {
-            showSection('attendance');
-            loadAttendanceTable();
-        });
+// Enrollment functionality
+document.getElementById('startEnrollCamera').addEventListener('click', startEnrollCamera);
+document.getElementById('captureEnroll').addEventListener('click', captureForEnrollment);
+document.getElementById('enrollForm').addEventListener('submit', saveStudent);
 
-        // Enrollment functionality
-        document.getElementById('startEnrollCamera').addEventListener('click', startEnrollCamera);
-        document.getElementById('captureEnroll').addEventListener('click', captureForEnrollment);
-        document.getElementById('enrollForm').addEventListener('submit', saveStudent);
-
-        
-        async function captureForEnrollment() {
+async function captureForEnrollment() {
     if (!isModelsLoaded) {
         showMessage('Models are still loading. Please wait.', 'warning');
         return;
@@ -904,17 +941,15 @@
     const canvas = document.getElementById('enrollCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Optimize canvas size for better performance
     const scale = 0.75;
     canvas.width = video.videoWidth * scale;
     canvas.height = video.videoHeight * scale;
 
     try {
-        // Optimized SSD MobileNet detection
         const detections = await faceapi
             .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({
-                minConfidence: 0.5,  // Higher confidence for better quality
-                maxResults: 2        // Limit results for performance
+                minConfidence: 0.5,
+                maxResults: 2
             }))
             .withFaceLandmarks()
             .withFaceDescriptors();
@@ -929,7 +964,6 @@
             return;
         }
 
-        // Clear canvas and draw face box
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const detection = detections[0];
         const { x, y, width, height } = detection.detection.box;
@@ -938,7 +972,6 @@
         ctx.lineWidth = 3;
         ctx.strokeRect(x * scale, y * scale, width * scale, height * scale);
         
-        // Store face descriptor
         capturedFaceDescriptor = detection.descriptor;
         
         document.getElementById('submitEnroll').disabled = false;
@@ -950,7 +983,6 @@
     }
 }
 
-// Add debouncing for mark attendance
 let attendanceTimeout = null;
 
 function markStudentAttendanceDebounced() {
@@ -960,70 +992,66 @@ function markStudentAttendanceDebounced() {
     
     attendanceTimeout = setTimeout(() => {
         markStudentAttendance();
-    }, 1000); // 1 second debounce
+    }, 1000);
 }
 
+function saveStudent(e) {
+    e.preventDefault();
+    
+    if (!capturedFaceDescriptor) {
+        showMessage('Please capture a face first.', 'warning');
+        return;
+    }
 
-        function saveStudent(e) {
-            e.preventDefault();
-            
-            if (!capturedFaceDescriptor) {
-                showMessage('Please capture a face first.', 'warning');
-                return;
-            }
+    const name = document.getElementById('studentName').value;
+    const id = document.getElementById('studentId').value;
+    const studentClass = document.getElementById('studentClass').value;
+    const email = document.getElementById('studentEmail').value;
 
-            const name = document.getElementById('studentName').value;
-            const id = document.getElementById('studentId').value;
-            const studentClass = document.getElementById('studentClass').value;
-            const email = document.getElementById('studentEmail').value;
+    if (enrolledStudents.find(s => s.id === id)) {
+        showMessage('Student ID already exists.', 'error');
+        return;
+    }
 
-            // Check if student ID already exists
-            if (enrolledStudents.find(s => s.id === id)) {
-                showMessage('Student ID already exists.', 'error');
-                return;
-            }
+    const student = {
+        name,
+        id,
+        class: studentClass,
+        email,
+        descriptor: Array.from(capturedFaceDescriptor),
+        enrolledAt: new Date().toISOString()
+    };
 
-            const student = {
-                name,
-                id,
-                class: studentClass,
-                email,
-                descriptor: Array.from(capturedFaceDescriptor),
-                enrolledAt: new Date().toISOString()
-            };
+    enrolledStudents.push(student);
 
-            enrolledStudents.push(student);
-            localStorage.setItem('enrolledStudents', JSON.stringify(enrolledStudents));
+    document.getElementById('enrollForm').reset();
+    document.getElementById('enrollCanvas').getContext('2d').clearRect(0, 0, 640, 480);
+    document.getElementById('submitEnroll').disabled = true;
+    document.getElementById('captureEnroll').disabled = true;
+    document.getElementById('startEnrollCamera').disabled = false;
+    
+    if (enrollVideoStream) {
+        enrollVideoStream.getTracks().forEach(track => track.stop());
+        enrollVideoStream = null;
+    }
+    
+    capturedFaceDescriptor = null;
+    showMessage(`Student ${name} enrolled successfully!`, 'success');
+}
 
-            // Reset form and camera
-            document.getElementById('enrollForm').reset();
-            document.getElementById('enrollCanvas').getContext('2d').clearRect(0, 0, 640, 480);
-            document.getElementById('submitEnroll').disabled = true;
-            document.getElementById('captureEnroll').disabled = true;
-            document.getElementById('startEnrollCamera').disabled = false;
-            
-            if (enrollVideoStream) {
-                enrollVideoStream.getTracks().forEach(track => track.stop());
-                enrollVideoStream = null;
-            }
-            
-            capturedFaceDescriptor = null;
-            showMessage(`Student ${name} enrolled successfully!`, 'success');
-        }
+// Recognition functionality
+document.getElementById('startRecognizeCamera').addEventListener('click', startRecognition);
+document.getElementById('stopRecognizeCamera').addEventListener('click', stopRecognition);
+document.getElementById('markAttendance').addEventListener('click', markStudentAttendance);
 
-        // Recognition functionality
-        document.getElementById('startRecognizeCamera').addEventListener('click', startRecognition);
-        document.getElementById('stopRecognizeCamera').addEventListener('click', stopRecognition);
-        document.getElementById('markAttendance').addEventListener('click', markStudentAttendance);
-
-        async function startEnrollCamera() {
+async function startEnrollCamera() {
     try {
         const video = document.getElementById('enrollVideo');
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-                width: { ideal: 480 }, // Smaller resolution for better performance
+                width: { ideal: 480 },
                 height: { ideal: 360 },
-                frameRate: { ideal: 15, max: 30 } // Limit frame rate
+                frameRate: { ideal: 15, max: 30 }
             } 
         });
         video.srcObject = stream;
@@ -1054,9 +1082,9 @@ async function startRecognition() {
         const video = document.getElementById('recognizeVideo');
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-                width: { ideal: 480 }, // Optimized resolution
+                width: { ideal: 480 },
                 height: { ideal: 360 },
-                frameRate: { ideal: 15, max: 30 } // Limit frame rate for performance
+                frameRate: { ideal: 15, max: 30 }
             } 
         });
         video.srcObject = stream;
@@ -1065,11 +1093,9 @@ async function startRecognition() {
         document.getElementById('startRecognizeCamera').disabled = true;
         document.getElementById('stopRecognizeCamera').disabled = false;
         
-        // Reset processing variables
         isProcessing = false;
         frameCount = 0;
         
-        // Start optimized recognition loop
         recognitionInterval = setInterval(performRecognition, 200);
         showMessage('Recognition started. Position student face in frame.', 'success');
         
@@ -1079,29 +1105,28 @@ async function startRecognition() {
     }
 }
 
-        function stopRecognition() {
-            if (recognizeVideoStream) {
-                recognizeVideoStream.getTracks().forEach(track => track.stop());
-                recognizeVideoStream = null;
-            }
-            
-            if (recognitionInterval) {
-                clearInterval(recognitionInterval);
-                recognitionInterval = null;
-            }
-            
-            document.getElementById('startRecognizeCamera').disabled = false;
-            document.getElementById('stopRecognizeCamera').disabled = true;
-            document.getElementById('recognizedStudent').classList.add('hidden');
-            
-            const canvas = document.getElementById('recognizeCanvas');
-            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-            
-            showMessage('Recognition stopped.', 'info');
-        }
+function stopRecognition() {
+    if (recognizeVideoStream) {
+        recognizeVideoStream.getTracks().forEach(track => track.stop());
+        recognizeVideoStream = null;
+    }
+    
+    if (recognitionInterval) {
+        clearInterval(recognitionInterval);
+        recognitionInterval = null;
+    }
+    
+    document.getElementById('startRecognizeCamera').disabled = false;
+    document.getElementById('stopRecognizeCamera').disabled = true;
+    document.getElementById('recognizedStudent').classList.add('hidden');
+    
+    const canvas = document.getElementById('recognizeCanvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    
+    showMessage('Recognition stopped.', 'info');
+}
 
-        async function performRecognition() {
-    // Skip processing if already processing or skip frames for performance
+async function performRecognition() {
     if (isProcessing || frameCount % 2 !== 0) {
         frameCount++;
         return;
@@ -1114,17 +1139,15 @@ async function startRecognition() {
     const canvas = document.getElementById('recognizeCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Process at reduced resolution for speed
     const scale = 0.5;
     canvas.width = video.videoWidth * scale;
     canvas.height = video.videoHeight * scale;
 
     try {
-        // Optimized SSD MobileNet detection with performance settings
         const detections = await faceapi
             .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({
-                minConfidence: 0.6,  // Higher confidence for fewer false positives
-                maxResults: 3        // Limit to 3 faces max for performance
+                minConfidence: 0.6,
+                maxResults: 3
             }))
             .withFaceLandmarks()
             .withFaceDescriptors();
@@ -1137,7 +1160,6 @@ async function startRecognition() {
             return;
         }
 
-        // Process only the largest/most confident face for performance
         const bestDetection = detections.reduce((best, current) => 
             current.detection.score > best.detection.score ? current : best
         );
@@ -1147,7 +1169,6 @@ async function startRecognition() {
         ctx.lineWidth = 3;
         ctx.strokeRect(x * scale, y * scale, width * scale, height * scale);
 
-        // Only perform face matching every 3rd frame for performance
         if (frameCount % 3 === 0) {
             const labeledDescriptors = enrolledStudents.map(student => 
                 new faceapi.LabeledFaceDescriptors(student.id, [new Float32Array(student.descriptor)])
@@ -1173,235 +1194,222 @@ async function startRecognition() {
     }
 }
 
+function displayRecognizedStudent(student, distance) {
+    const confidence = Math.round((1 - distance) * 100);
+    
+    document.getElementById('recognizedName').textContent = student.name;
+    document.getElementById('recognizedId').textContent = `ID: ${student.id}`;
+    document.getElementById('recognizedClass').textContent = `Class: ${student.class}`;
+    document.getElementById('recognizedConfidence').textContent = `Confidence: ${confidence}%`;
+    
+    document.getElementById('recognizedStudent').classList.remove('hidden');
+    document.getElementById('recognizedStudent').dataset.studentId = student.id;
+}
 
+function markStudentAttendance() {
+    const studentId = document.getElementById('recognizedStudent').dataset.studentId;
+    const student = enrolledStudents.find(s => s.id === studentId);
+    
+    if (!student) return;
 
-        function displayRecognizedStudent(student, distance) {
-            const confidence = Math.round((1 - distance) * 100);
-            
-            document.getElementById('recognizedName').textContent = student.name;
-            document.getElementById('recognizedId').textContent = `ID: ${student.id}`;
-            document.getElementById('recognizedClass').textContent = `Class: ${student.class}`;
-            document.getElementById('recognizedConfidence').textContent = `Confidence: ${confidence}%`;
-            
-            document.getElementById('recognizedStudent').classList.remove('hidden');
-            document.getElementById('recognizedStudent').dataset.studentId = student.id;
-        }
+    const today = new Date().toDateString();
+    const existingRecord = attendanceRecords.find(
+        r => r.studentId === studentId && new Date(r.date).toDateString() === today
+    );
 
-        function markStudentAttendance() {
-            const studentId = document.getElementById('recognizedStudent').dataset.studentId;
-            const student = enrolledStudents.find(s => s.id === studentId);
-            
-            if (!student) return;
+    if (existingRecord) {
+        showMessage(`${student.name} already marked present today.`, 'warning');
+        return;
+    }
 
-            const today = new Date().toDateString();
-            const existingRecord = attendanceRecords.find(
-                r => r.studentId === studentId && new Date(r.date).toDateString() === today
-            );
+    const attendanceRecord = {
+        studentId: student.id,
+        name: student.name,
+        class: student.class,
+        date: new Date().toISOString(),
+        status: 'Present',
+        markedAt: new Date().toLocaleTimeString()
+    };
 
-            if (existingRecord) {
-                showMessage(`${student.name} already marked present today.`, 'warning');
-                return;
+    attendanceRecords.push(attendanceRecord);
+    loadAttendanceTable();
+    showMessage(`${student.name} marked present successfully!`, 'success');
+}
+
+// Export attendance to CSV
+document.getElementById('exportAttendance').addEventListener('click', exportToCSV);
+document.getElementById('clearAttendance').addEventListener('click', clearAllData);
+document.getElementById('attendanceDate').addEventListener('change', loadAttendanceTable);
+
+function exportToCSV() {
+    if (attendanceRecords.length === 0) {
+        showMessage('No attendance records to export.', 'warning');
+        return;
+    }
+
+    const headers = ['Name', 'Student ID', 'Class', 'Date', 'Time', 'Status'];
+    const csvContent = [
+        headers.join(','),
+        ...attendanceRecords.map(record => [
+            record.name,
+            record.studentId,
+            record.class,
+            new Date(record.date).toDateString(),
+            record.markedAt,
+            record.status
+        ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showMessage('Attendance exported successfully!', 'success');
+}
+
+function clearAllData() {
+    if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+        enrolledStudents = [];
+        attendanceRecords = [];
+        loadAttendanceTable();
+        showMessage('All data cleared.', 'info');
+    }
+}
+
+// Utility functions
+function showMessage(message, type = 'info') {
+    const container = document.getElementById('messageContainer');
+    const messageEl = document.createElement('div');
+    
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-yellow-500',
+        info: 'bg-blue-500'
+    };
+    
+    messageEl.className = `${colors[type]} text-white px-4 py-2 rounded-lg mb-2 slide-in`;
+    messageEl.textContent = message;
+    
+    container.appendChild(messageEl);
+    
+    setTimeout(() => {
+        messageEl.remove();
+    }, 5000);
+}
+
+// Improved PWA Functions
+function showInstallPopup() {
+    markInstallAttempted();
+    document.getElementById('install-popup-overlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function hideInstallPopup() {
+    document.getElementById('install-popup-overlay').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+function isAppInstalled() {
+    // Check if manually marked as installed
+    if (sessionStorage.getItem('pwa-installed') === 'true') {
+        return true;
+    }
+    
+    // Check if user attempted install (and likely succeeded)
+    if (sessionStorage.getItem('pwa-install-attempted') === 'true') {
+        return true;
+    }
+    
+    // Check display mode
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+        sessionStorage.setItem('pwa-installed', 'true');
+        return true;
+    }
+    
+    // Check iOS standalone
+    if (window.navigator && window.navigator.standalone === true) {
+        sessionStorage.setItem('pwa-installed', 'true');
+        return true;
+    }
+    
+    // Check if launched from home screen (Android)
+    if (document.referrer.includes('android-app://')) {
+        sessionStorage.setItem('pwa-installed', 'true');
+        return true;
+    }
+    
+    return false;
+}
+
+function markInstallAttempted() {
+    try {
+        sessionStorage.setItem('pwa-install-attempted', 'true');
+    } catch (e) {
+        console.log('Could not save install state');
+    }
+}
+
+function resetInstallState() {
+    try {
+        sessionStorage.removeItem('pwa-install-attempted');
+        sessionStorage.removeItem('pwa-installed');
+        toggleInstallButton();
+    } catch (e) {
+        console.log('Could not reset install state');
+    }
+}
+
+function toggleInstallButton() {
+    const installContainer = document.getElementById('install-button-container');
+    
+    if (isAppInstalled()) {
+        installContainer.classList.add('hidden');
+        return;
+    }
+    
+    if (currentSection === 'recognize' && deferredPrompt) {
+        installContainer.classList.remove('hidden');
+    } else {
+        installContainer.classList.add('hidden');
+    }
+}
+
+// Event listeners
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        hideInstallPopup();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    toggleInstallButton();
+    
+    // Listen for display mode changes
+    if (window.matchMedia) {
+        window.matchMedia('(display-mode: standalone)').addEventListener('change', function(e) {
+            if (e.matches) {
+                sessionStorage.setItem('pwa-installed', 'true');
             }
-
-            const attendanceRecord = {
-                studentId: student.id,
-                name: student.name,
-                class: student.class,
-                date: new Date().toISOString(),
-                status: 'Present',
-                markedAt: new Date().toLocaleTimeString()
-            };
-
-            attendanceRecords.push(attendanceRecord);
-            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
-            loadAttendanceTable();
-            showMessage(`${student.name} marked present successfully!`, 'success');
-        }
-
-        // Export attendance to CSV
-        document.getElementById('exportAttendance').addEventListener('click', exportToCSV);
-        document.getElementById('clearAttendance').addEventListener('click', clearAllData);
-        document.getElementById('attendanceDate').addEventListener('change', loadAttendanceTable);
-
-        function exportToCSV() {
-            if (attendanceRecords.length === 0) {
-                showMessage('No attendance records to export.', 'warning');
-                return;
-            }
-
-            const headers = ['Name', 'Student ID', 'Class', 'Date', 'Time', 'Status'];
-            const csvContent = [
-                headers.join(','),
-                ...attendanceRecords.map(record => [
-                    record.name,
-                    record.studentId,
-                    record.class,
-                    new Date(record.date).toDateString(),
-                    record.markedAt,
-                    record.status
-                ].join(','))
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            showMessage('Attendance exported successfully!', 'success');
-        }
-
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                localStorage.removeItem('enrolledStudents');
-                localStorage.removeItem('attendanceRecords');
-                enrolledStudents = [];
-                attendanceRecords = [];
-                loadAttendanceTable();
-                showMessage('All data cleared.', 'info');
-            }
-        }
-
-        // Utility functions
-        function showMessage(message, type = 'info') {
-            const container = document.getElementById('messageContainer');
-            const messageEl = document.createElement('div');
-            
-            const colors = {
-                success: 'bg-green-500',
-                error: 'bg-red-500',
-                warning: 'bg-yellow-500',
-                info: 'bg-blue-500'
-            };
-            
-            messageEl.className = `${colors[type]} text-white px-4 py-2 rounded-lg mb-2 slide-in`;
-            messageEl.textContent = message;
-            
-            container.appendChild(messageEl);
-            
-            setTimeout(() => {
-                messageEl.remove();
-            }, 5000);
-        }
-
-        // PWA Functions (from provided reference)
-        function showInstallPopup() {
-            markInstallAttempted();
-            document.getElementById('install-popup-overlay').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function hideInstallPopup() {
-            document.getElementById('install-popup-overlay').classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-
-        function isAppInstalled() {
-            if (localStorage.getItem('pwa-install-attempted') === 'true') {
-                return true;
-            }
-            
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                return true;
-            }
-            
-            if (window.navigator.standalone === true) {
-                return true;
-            }
-            
-            if (document.referrer.includes('android-app://')) {
-                return true;
-            }
-            
-            if (window.matchMedia('(display-mode: minimal-ui)').matches) {
-                return true;
-            }
-            
-            if (window.matchMedia('(display-mode: fullscreen)').matches) {
-                return true;
-            }
-            
-            if (window.navigator.userAgent.includes('wv')) {
-                return true;
-            }
-            
-            if (window.location.search.includes('utm_source=homescreen') || 
-                window.location.search.includes('source=pwa')) {
-                return true;
-            }
-            
-            if ('getInstalledRelatedApps' in window.navigator) {
-                window.navigator.getInstalledRelatedApps().then(relatedApps => {
-                    if (relatedApps.length > 0) {
-                        document.getElementById('install-button-container').classList.add('hidden');
-                    }
-                }).catch(() => {
-                    // Ignore errors
-                });
-            }
-            
-            if (window.chrome && window.chrome.app && window.chrome.app.isInstalled) {
-                return true;
-            }
-            
-            if (window.matchMedia('(display-mode: browser)').matches === false) {
-                return true;
-            }
-            
-            return false;
-        }
-
-        function markInstallAttempted() {
-            try {
-                localStorage.setItem('pwa-install-attempted', 'true');
-            } catch (e) {
-                console.log('Could not save install state');
-            }
-        }
-
-        function resetInstallState() {
-            try {
-                localStorage.removeItem('pwa-install-attempted');
-                toggleInstallButton();
-            } catch (e) {
-                console.log('Could not reset install state');
-            }
-        }
-
-        function toggleInstallButton() {
-            const installContainer = document.getElementById('install-button-container');
-            
-            if (isAppInstalled()) {
-                installContainer.classList.add('hidden');
-                return;
-            }
-            
-            if (currentSection === 'recognize') {
-                installContainer.classList.remove('hidden');
-            } else {
-                installContainer.classList.add('hidden');
-            }
-        }
-
-        // Event listeners
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                hideInstallPopup();
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
             toggleInstallButton();
-            
-            window.matchMedia('(display-mode: standalone)').addEventListener('change', function(e) {
-                toggleInstallButton();
-            });
         });
-        function loadAttendanceTable() {
+    }
+});
+
+// Listen for app installed event
+window.addEventListener('appinstalled', () => {
+    sessionStorage.setItem('pwa-installed', 'true');
+    toggleInstallButton();
+    showMessage('App installed successfully!', 'success');
+});
+
+function loadAttendanceTable() {
     const tbody = document.getElementById('attendanceTableBody');
     const selectedDate = document.getElementById('attendanceDate').value;
     
@@ -1445,33 +1453,31 @@ async function startRecognition() {
 function deleteAttendanceRecord(index) {
     if (confirm('Are you sure you want to delete this record?')) {
         attendanceRecords.splice(index, 1);
-        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
         loadAttendanceTable();
         showMessage('Attendance record deleted.', 'success');
     }
 }
 
-        // Initialize app
-        window.addEventListener('load', () => {
-            loadModels();
-            showSection('recognize');
-            
-            // Set today's date as default
-            document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
-        });
+// Initialize app
+window.addEventListener('load', () => {
+    loadModels();
+    showSection('recognize');
+    
+    document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+});
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (enrollVideoStream) {
-                enrollVideoStream.getTracks().forEach(track => track.stop());
-            }
-            if (recognizeVideoStream) {
-                recognizeVideoStream.getTracks().forEach(track => track.stop());
-            }
-            if (recognitionInterval) {
-                clearInterval(recognitionInterval);
-            }
-        });
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (enrollVideoStream) {
+        enrollVideoStream.getTracks().forEach(track => track.stop());
+    }
+    if (recognizeVideoStream) {
+        recognizeVideoStream.getTracks().forEach(track => track.stop());
+    }
+    if (recognitionInterval) {
+        clearInterval(recognitionInterval);
+    }
+});
     </script>
 </body>
 </html>
